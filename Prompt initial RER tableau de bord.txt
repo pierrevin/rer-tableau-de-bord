@@ -1,0 +1,98 @@
+Construis le projet selon ce prompt en commençant par l’analyse du fichier BDD articles Le Mutualiste - RER.xlsx et la structure du repo.
+
+1. Contexte et objectif
+Développer une plateforme éditoriale de partage d’articles pour le Réseau des Éditeurs de Revues (RER) / mutuelles, qui remplace le tableau de bord actuel hébergé sur Looker Studio 1.
+Objectifs :
+Remplacer Looker par un outil sur mesure (plus de dépendance aux erreurs Looker, processus maîtrisés).
+Gérer tout le cycle rédaction → relecture → publication dans une seule interface.
+Enrichir les contenus avec l’IA (découpage, titres, résumés, posts RS, adaptation multi-format).
+Offrir une UX moderne, efficace et responsive (bureau + mobile/tablette).
+Identité : conserver la marque « RESEAU DES EDITEURS DE REVUES » / « RER », le titre « Base de données d’articles » et la baseline « Cherchez, lisez, téléchargez, publiez sur votre site ! ».
+
+Workflow actuel (à remplacer / simplifier) :
+Make : automatisations (enchaînement des étapes entre les outils).
+Google Docs : rédaction / édition des articles, lien « Voir la version Google Doc » dans Looker.
+Looker Studio : tableau de bord de consultation, filtres, exports, formulaire de dépôt (Google Form).
+Google Sheets : base/source des données pour Looker (articles, métadonnées).
+Objectif pour le nouveau tableau de bord :
+Réduire la complexité et la dépendance à cette chaîne (Make + Google Docs + Looker + Google Sheets).
+Viser une plateforme unique où : dépôt, relecture, publication, consultation et exports se font dans la même app, avec une vraie BDD (et plus un Google Sheet comme source centrale).
+Google Docs : soit disparaît (édition directe dans l’interface), soit reste optionnel (lien vers un Doc existant pour certains articles) — à trancher selon le besoin.
+Make : les flux utiles (ex. notification email, envoi vers d’autres outils) peuvent être recréés dans l’app (API, jobs, webhooks) plutôt que dans Make.
+Migration des données : prévoir un import depuis Google Sheets (ou depuis l’export du xlsx actuel) vers la nouvelle BDD, pour ne pas perdre l’historique.
+
+2. Design et expérience utilisateur
+Style : interface épurée, moderne (pas « template générique »). Typographies lisibles, hiérarchie claire, couleurs cohérentes (orange/bleu si on garde la charte actuelle, ou nouvelle charte définie).
+Responsive : utilisation confortable sur desktop, tablette et mobile (listes, filtres, formulaire de dépôt, lecture d’article).
+Accessibilité : contraste, focus clavier, labels, structure sémantique (landmarks, titres).
+Performance : chargement rapide, listes longues gérées (pagination ou virtualisation), filtres sans rechargement complet de la page quand c’est possible.
+Feedback : messages de succès/erreur, états de chargement, indication claire des statuts d’articles (à relire, corrigé, validé, publié).
+3. Stack technique et hébergement
+Technos modernes : front (ex. React/Next.js ou Vue/Nuxt, ou équivalent) + back API (Node/Express, ou Next API routes, ou équivalent) + base de données relationnelle.
+Hébergement : priorité OVH (VPS, Web Paas, ou hébergement web selon le besoin). Si OVH impossible ou contraignant : Supabase (PostgreSQL + Auth + Storage + éventuellement Edge Functions).
+Base de données : structure dérivée du fichier existant Documentation initiale/BDD articles Le Mutualiste - RER.xlsx — analyser les feuilles et colonnes de ce fichier pour définir le schéma (articles, auteurs, mutuelles, rubriques, formats, états, etc.). Prévoir des champs pour : titre, auteur(s), date, format, rubrique, état (à relire, corrigé, validé, publié), mutuelle, post RS (oui/non), contenu, résumé, chapeau, lien photo, post réseaux sociaux, et toute autre colonne utile du xlsx.
+Authentification et rôles : utilisateurs avec rôles distincts (auteur, relecteur, admin) et droits associés (voir section 5).
+4. Données et contenu (référence BDD actuelle)
+S’appuyer sur Documentation initiale/BDD articles Le Mutualiste - RER.xlsx pour :
+lister toutes les colonnes (champs) à reproduire ou faire évoluer ;
+prévoir une migration/import des données existantes vers la nouvelle BDD.
+Données visibles dans l’actuel Looker (à refléter ou améliorer) : période, rubrique, format, auteur, état (ex. « Relu »), mutuelle, post RS, recherche plein texte, nombre d’articles, date du dernier article. Côté article : titre, auteur, date, format, résumé, post réseaux sociaux (texte prêt à publier), liens Google Doc / photo et exports (Texte, HTML, Word).
+Prévoir des indicateurs pilotage comme dans le PDF : nombre d’articles, évolution dans le temps, auteurs les plus actifs, répartition thématique, diffusion (et si besoin suivi des publications par mutuelle).
+5. Fonctionnalités détaillées
+5.1 Navigation, recherche et lecture
+Filtres : période, rubrique, format, auteur, état (à relire, corrigé, validé, publié), mutuelle, post RS ; optionnel : nombre de signes (comme sur l’actuel).
+Recherche : champ recherche plein texte (titre, contenu, auteur, etc.) avec feedback immédiat.
+Liste d’articles : tableau ou cartes (selon le design) avec au minimum : Titre, Auteur, Date, Format ; tri (ex. par date) ; sélection d’un article pour afficher le détail.
+Détail article : affichage du résumé/chapeau, du contenu, de l’image (lien photo), du bloc « Post réseaux sociaux » si présent ; boutons d’action : voir version Google Doc (si conservé), télécharger photo, exporter en Texte / HTML / Word. Option « Réinitialiser les filtres » (équivalent du bouton actuel).
+5.2 Dépôt d’articles (multi-modal)
+Trois modes de dépôt :
+Saisie directe : formulaire en ligne (titre, auteur, contenu, lien photo, etc.).
+Import Word : upload d’un fichier .docx, extraction du texte (et si possible métadonnées) pour pré-remplir le formulaire.
+Envoi par email : adresse dédiée à laquelle on envoie l’article (pièce jointe Word ou corps du mail) ; traitement côté serveur (script/worker) pour créer un brouillon d’article et notifier.
+Identification auteur : possibilité de sélectionner un auteur existant (liste Prénom NOM) pour pré-remplir les infos, comme sur l’actuel formulaire.
+Photos : plus de service externe
+Actuellement : les photos passent par un service externe (ex. imgbb : upload manuel, copier-coller du lien direct dans le formulaire). Identifiants partagés, workflow lourd.
+Objectif pour le nouveau tableau de bord :
+Upload direct des images dans la plateforme (drag & drop ou sélection de fichier dans le formulaire de dépôt / édition d’article).
+Stockage interne : hébergement des fichiers sur l’infra du projet (OVH : espace disque ou object storage ; Supabase : Storage) avec URLs stables et sécurisées.
+Plus de dépendance à imgbb ou tout autre service tiers pour les illustrations d’articles.
+Conserver un champ « Lien de la photo » ou « Image » côté données, mais alimenté automatiquement après upload (URL générée par la plateforme), avec option d’affichage et de téléchargement comme aujourd’hui (« Télécharger la photo »).
+
+
+5.3 Découpage / enrichissement automatique (IA)
+Découpage auto pour la BDD : à partir du contenu brut déposé, proposer ou remplir automatiquement : titre, résumé, chapeau, post pour réseaux sociaux (avec hashtags si pertinent).
+Optionnel (proposition PDF) : correction stylistique, suggestions de cohérence, adaptation par canal (site web, LinkedIn, newsletter) pour limiter le duplicate content.
+Interface : pour relecteurs/admin, possibilité de comparer version initiale vs version enrichie IA avant validation.
+5.4 Gestion des utilisateurs et droits
+Rôles : au minimum Auteur, Relecteur, Admin.
+Auteur : dépôt de ses articles, consultation de ses articles, réception des notifications (relu, publié).
+Relecteur : voir les articles à relire, corriger/éditer dans l’interface, changer l’état (à relire → corrigé → validé → publié).
+Admin : tout ce que fait le relecteur + gestion des utilisateurs, des rôles, des paramètres (mutuelles, rubriques, formats), accès au pilotage et aux stats.
+Authentification : connexion sécurisée (email/mot de passe ou SSO si prévu plus tard) ; « Changer de compte » / déconnexion visible.
+5.5 Relecture et correction (admin / relecteurs)
+Workflow d’états : à relire → corrigé → validé → publié (ou variante alignée sur le xlsx et le PDF).
+Interface de relecture : édition du contenu directement dans l’interface (éditeur riche ou markdown selon le choix technique), pas seulement formulaire externe.
+Historique : traçabilité des corrections et validations (qui, quand, quel état).
+Bouton « Corriger » par article (comme sur l’actuel) pour ouvrir l’édition.
+5.6 Notifications (auteurs)
+Notifications lorsque l’article passe en état « relu » ou « publié » (ou selon les états définis).
+Canaux : email obligatoire ; optionnel : notification in-app (badge, liste de notifications).
+5.7 Exports et récupération
+Formats d’export : Word, PDF, HTML, Texte, Markdown (au minimum Word, HTML, Texte comme aujourd’hui).
+Téléchargement : lien direct ou « Enregistrer la cible du lien sous » si téléchargement automatique bloqué.
+Accès Google Doc : conserver le lien « Voir la version Google Doc » si la donnée existe en BDD ; sinon prévoir un champ pour ce lien.
+6. Tableau de bord pilotage (optionnel mais recommandé)
+Indicateurs : nombre d’articles, date du dernier article, évolution du nombre d’articles dans le temps (graphique type « Quand ? »).
+Répartition : qui publie (nombre d’articles par auteur), répartition par mutuelle, par format, par thématique/rubrique ; part « Post RS » (oui/non).
+Exports : statistiques exportables en PDF et/ou Excel (comme dans la proposition PDF).
+7. Contraintes et préférences
+Hébergement : OVH en priorité ; sinon Supabase (app + BDD + stockage).
+Pas d’oubli : prise en compte du fichier Documentation initiale/BDD articles Le Mutualiste - RER.xlsx pour le schéma et l’import ; référence aux captures d’écran de l’actuel Looker (dans le dossier assets/captures) pour l’ergonomie et les libellés.
+Maintenance / évolutions : prévoir une base de code et une architecture claires pour maintenance et évolutions (documentation technique courte, variables d’environnement, déploiement reproductible).
+8. Livrables attendus (à adapter selon la phase)
+Application web déployée (ou instructions de déploiement OVH/Supabase).
+Schéma de BDD et script d’import depuis le xlsx si possible.
+Comptes de test : au moins un auteur, un relecteur, un admin.
+Documentation utilisateur minimale : dépôt d’article, relecture, exports, notifications.
+Tu peux copier ce bloc dans Cursor et, en mode Agent, demander par exemple : « Construis le projet selon ce prompt en commençant par l’analyse du fichier BDD articles Le Mutualiste - RER.xlsx et la structure du repo. »
+Si tu veux, on peut ensuite restreindre le prompt à une phase 1 (navigation + dépôt + relecture basique) et garder l’IA et les notifications pour une phase 2.
