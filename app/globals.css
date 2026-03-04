@@ -1,0 +1,26 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  @apply bg-slate-50 text-slate-900 antialiased;
+}
+
+a {
+  @apply text-sky-700 hover:text-sky-900;
+}
+
+table {
+  border-collapse: collapse;
+}
+
+th,
+td {
+  @apply align-top;
+}
+

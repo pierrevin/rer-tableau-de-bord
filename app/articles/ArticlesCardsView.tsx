@@ -1,0 +1,200 @@
+ "use client";
+
+import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
+
+type ArticleSummary = {
+  id: string;
+  titre: string;
+  chapo: string | null;
+  lienPhoto: string | null;
+  legendePhoto: string | null;
+  auteur: { prenom: string; nom: string } | null;
+  mutuelle: { nom: string } | null;
+};
+
+type ArticlesCardsViewProps = {
+  initialArticles: ArticleSummary[];
+  total: number;
+  initialPage: number;
+  pageSize: number;
+  q: string;
+  etatSlug: string;
+  mutuelleId: string;
+  rubriqueId?: string;
+  formatId?: string;
+  since?: string;
+  from?: string;
+  to?: string;
+};
+
+export function ArticlesCardsView({
+  initialArticles,
+  total,
+  initialPage,
+  pageSize,
+  q,
+  etatSlug,
+  mutuelleId,
+  rubriqueId = "",
+  formatId = "",
+  since = "",
+  from = "",
+  to = "",
+}: ArticlesCardsViewProps) {
+  const [articles, setArticles] = useState<ArticleSummary[]>(initialArticles);
+  const [hasMore, setHasMore] = useState(initialArticles.length < total);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const currentPageRef = useRef(initialPage);
+
+  // Quand les filtres ou la recherche changent (et que le serveur renvoie un nouveau jeu initial),
+  // on réinitialise la liste et la pagination client.
+  useEffect(() => {
+    setArticles(initialArticles);
+    setHasMore(initialArticles.length < total);
+    currentPageRef.current = initialPage;
+  }, [initialArticles, total, initialPage]);
+
+  const buildUrl = (page: number) => {
+    const params = new URLSearchParams();
+    params.set("page", String(page));
+    params.set("limit", String(pageSize));
+    if (q) params.set("q", q);
+    if (etatSlug) params.set("etat", etatSlug);
+    if (mutuelleId) params.set("mutuelleId", mutuelleId);
+    if (rubriqueId) params.set("rubriqueId", rubriqueId);
+    if (formatId) params.set("formatId", formatId);
+    if (since) params.set("since", since);
+    if (from) params.set("from", from);
+    if (to) params.set("to", to);
+    return `/api/articles?${params.toString()}`;
+  };
+
+  const loadMore = async () => {
+    if (!hasMore || loadingMore) return;
+    setLoadingMore(true);
+    const nextPage = currentPageRef.current + 1;
+    try {
+      const res = await fetch(buildUrl(nextPage));
+      if (!res.ok) {
+        setHasMore(false);
+        return;
+      }
+      const data = await res.json();
+      const newArticles: ArticleSummary[] = data.articles ?? [];
+
+      setArticles((prev) => {
+        const existingIds = new Set(prev.map((a) => a.id));
+        const merged = [
+          ...prev,
+          ...newArticles.filter((a) => !existingIds.has(a.id)),
+        ];
+        if (merged.length >= data.total) {
+          setHasMore(false);
+        }
+        return merged;
+      });
+      currentPageRef.current = nextPage;
+      if (!newArticles.length) {
+        setHasMore(false);
+      }
+    } catch {
+      setHasMore(false);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!hasMore) return;
+    const node = sentinelRef.current;
+    if (!node) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const first = entries[0];
+        if (first.isIntersecting) {
+          loadMore();
+        }
+      },
+      { rootMargin: "200px" }
+    );
+
+    observer.observe(node);
+    return () => {
+      observer.disconnect();
+    };
+  }, [hasMore, loadingMore]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (!articles.length) {
+    return (
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <p className="col-span-full rounded-md bg-white px-3 py-6 text-center text-sm text-slate-500 shadow-sm ring-1 ring-slate-200">
+          Aucun article ne correspond à ces critères. Essayez d&apos;élargir
+          votre recherche ou de modifier les filtres.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        {articles.map((article) => (
+          <article
+            key={article.id}
+            className="flex h-full flex-col overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-200"
+          >
+            <div className="relative h-40 w-full bg-slate-100">
+              {article.lienPhoto ? (
+                <img
+                  src={article.lienPhoto}
+                  alt={article.legendePhoto || article.titre}
+                  className="h-full w-full object-cover"
+                  loading="lazy"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-xs text-slate-400">
+                  Pas de photo
+                </div>
+              )}
+            </div>
+            <div className="flex flex-1 flex-col gap-2 p-4">
+              <Link
+                href={`/articles/${article.id}`}
+                className="text-base font-semibold text-slate-900 hover:underline sm:text-lg"
+              >
+                {article.titre}
+              </Link>
+              {article.chapo && (
+                <p className="line-clamp-2 text-sm text-slate-600">
+                  {article.chapo}
+                </p>
+              )}
+              <p className="mt-auto text-xs text-slate-500">
+                {article.auteur &&
+                  `${article.auteur.prenom} ${article.auteur.nom}`}
+                {article.mutuelle && ` · ${article.mutuelle.nom}`}
+              </p>
+            </div>
+          </article>
+        ))}
+      </div>
+
+      <div ref={sentinelRef} className="h-8">
+        {loadingMore && (
+          <p className="mt-3 text-center text-xs text-slate-400">
+            Chargement…
+          </p>
+        )}
+        {!hasMore && articles.length < total && (
+          <p className="mt-3 text-center text-xs text-slate-400">
+            Tous les articles chargés.
+          </p>
+        )}
+      </div>
+    </>
+  );
+}
+

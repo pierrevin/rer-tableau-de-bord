@@ -1,0 +1,126 @@
+// RER Tableau de bord V2 - Schéma BDD
+// Compatible PostgreSQL (local, Supabase, OVH)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Mutuelle {
+  id       String    @id @default(cuid())
+  nom      String    @unique
+  auteurs  Auteur[]
+  articles Article[]
+}
+
+model Rubrique {
+  id       String    @id @default(cuid())
+  libelle  String    @unique
+  articles Article[]
+}
+
+model Format {
+  id              String    @id @default(cuid())
+  libelle         String    @unique
+  signesReference Int? // nombre de signes cible pour guidage rédacteur
+  articles        Article[]
+}
+
+model Etat {
+  id                 String              @id @default(cuid())
+  slug               String              @unique // a_relire, corrige, valide, publie
+  libelle            String
+  ordre              Int                 @default(0)
+  articles           Article[]
+  articleHistoriques ArticleHistorique[]
+}
+
+model Auteur {
+  id         String    @id @default(cuid())
+  prenom     String
+  nom        String
+  email      String?
+  mutuelleId String?
+  mutuelle   Mutuelle? @relation(fields: [mutuelleId], references: [id])
+  articles   Article[]
+
+  @@unique([prenom, nom])
+}
+
+model Article {
+  id              String              @id @default(cuid())
+  codeArticle     String? // ex. ART_2026-02 ...
+  titre           String
+  chapo           String?             @db.Text
+  contenu         String              @db.Text
+  legendePhoto    String?             @db.Text
+  postRs          String?             @db.Text
+  lienPhoto       String?
+  lienGoogleDoc   String?
+  nombreSignes    Int?
+  dateDepot       DateTime?           @map("date_depot")
+  datePublication DateTime?           @map("date_publication")
+  auteurId        String
+  auteur          Auteur              @relation(fields: [auteurId], references: [id])
+  mutuelleId      String?
+  mutuelle        Mutuelle?           @relation(fields: [mutuelleId], references: [id])
+  rubriqueId      String?
+  rubrique        Rubrique?           @relation(fields: [rubriqueId], references: [id])
+  formatId        String?
+  format          Format?             @relation(fields: [formatId], references: [id])
+  etatId          String?
+  etat            Etat?               @relation(fields: [etatId], references: [id])
+  createdAt       DateTime            @default(now()) @map("created_at")
+  updatedAt       DateTime            @updatedAt @map("updated_at")
+  historiques     ArticleHistorique[]
+  blocs           ArticleBloc[]
+
+  @@index([dateDepot])
+  @@index([etatId])
+  @@index([auteurId])
+  @@index([mutuelleId])
+  @@index([rubriqueId])
+  @@index([formatId])
+}
+
+model ArticleBloc {
+  id        String  @id @default(cuid())
+  articleId String
+  article   Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  ordre     Int
+  type      String // chapo | paragraphe | image | legende
+  contenu   String? @db.Text
+  url       String?
+
+  @@index([articleId])
+  @@index([articleId, ordre])
+}
+
+model ArticleHistorique {
+  id          String   @id @default(cuid())
+  articleId   String
+  article     Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  etatId      String?
+  etat        Etat?    @relation(fields: [etatId], references: [id])
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
+  commentaire String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([articleId])
+}
+
+model User {
+  id           String              @id @default(cuid())
+  email        String              @unique
+  passwordHash String?             @map("password_hash")
+  role         String              @default("auteur") // admin | relecteur | auteur | lecteur
+  auteurId     String?
+  createdAt    DateTime            @default(now()) @map("created_at")
+  updatedAt    DateTime            @updatedAt @map("updated_at")
+  historiques  ArticleHistorique[]
+}

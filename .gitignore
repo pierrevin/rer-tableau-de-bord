@@ -11,3 +11,5 @@ out/
 .env.*.local
 *.log
 .vercel
+public/uploads/*
+!public/uploads/.gitkeep
