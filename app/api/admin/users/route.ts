@@ -5,6 +5,7 @@ import { getSessionUser } from "@/lib/auth";
 export async function GET() {
   const users = await prisma.user.findMany({
     orderBy: { email: "asc" },
+    take: 500,
   });
   const auteurs = await prisma.auteur.findMany({
     orderBy: [{ nom: "asc" }, { prenom: "asc" }],

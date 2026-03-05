@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { ingestDebug } from "@/lib/ingest-debug";
 import { getEtatBadgeClasses } from "../articles/ArticlesCardsExplorer";
 import RichArticleEditor from "../components/RichArticleEditor";
 
@@ -138,54 +139,28 @@ function AdminArticlePanel({
     if (!detail || updatingEtat) return;
     setUpdatingEtat(true);
     try {
-      // #region agent log
-      fetch("http://127.0.0.1:7402/ingest/cd3f381d-1b5a-4cc6-8b78-0a0138a72f19", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Debug-Session-Id": "fb943b",
-        },
-        body: JSON.stringify({
-          sessionId: "fb943b",
-          runId: "pre-fix",
-          hypothesisId: "H_STATE_CHANGE",
-          location: "app/admin/AdminReviewExplorer.tsx:handleChangeEtat:beforeFetch",
-          message: "handleChangeEtat called",
-          data: {
-            articleId: detail.id,
-            targetEtatId,
-          },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
+      ingestDebug({
+        sessionId: "fb943b",
+        runId: "pre-fix",
+        hypothesisId: "H_STATE_CHANGE",
+        location: "app/admin/AdminReviewExplorer.tsx:handleChangeEtat:beforeFetch",
+        message: "handleChangeEtat called",
+        data: { articleId: detail.id, targetEtatId },
+      });
 
       const res = await fetch(`/api/articles/${detail.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ etatId: targetEtatId }),
       });
-      // #region agent log
-      fetch("http://127.0.0.1:7402/ingest/cd3f381d-1b5a-4cc6-8b78-0a0138a72f19", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Debug-Session-Id": "fb943b",
-        },
-        body: JSON.stringify({
-          sessionId: "fb943b",
-          runId: "pre-fix",
-          hypothesisId: "H_STATE_CHANGE",
-          location: "app/admin/AdminReviewExplorer.tsx:handleChangeEtat:afterFetch",
-          message: "handleChangeEtat response",
-          data: {
-            ok: res.ok,
-            status: res.status,
-          },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
+      ingestDebug({
+        sessionId: "fb943b",
+        runId: "pre-fix",
+        hypothesisId: "H_STATE_CHANGE",
+        location: "app/admin/AdminReviewExplorer.tsx:handleChangeEtat:afterFetch",
+        message: "handleChangeEtat response",
+        data: { ok: res.ok, status: res.status },
+      });
 
       if (!res.ok) {
         return;
@@ -375,32 +350,20 @@ function AdminArticlePanel({
                   setSavingContent(true);
                   try {
                     const { chapo, body } = extractChapoAndBody(html);
-                    // #region agent log
-                    fetch("http://127.0.0.1:7402/ingest/cd3f381d-1b5a-4cc6-8b78-0a0138a72f19", {
-                      method: "POST",
-                      headers: {
-                        "Content-Type": "application/json",
-                        "X-Debug-Session-Id": "fb943b",
+                    ingestDebug({
+                      sessionId: "fb943b",
+                      runId: "pre-fix",
+                      hypothesisId: "H_AUTOSAVE_OR_ONCHANGE",
+                      location:
+                        "app/admin/AdminReviewExplorer.tsx:RichArticleEditor:onChange:beforeFetch",
+                      message: "Admin auto-save triggered",
+                      data: {
+                        articleId: detail.id,
+                        htmlLength: html.length,
+                        chapoPreview: chapo ? chapo.slice(0, 80) : null,
+                        bodyLength: body.length,
                       },
-                      body: JSON.stringify({
-                        sessionId: "fb943b",
-                        runId: "pre-fix",
-                        hypothesisId: "H_AUTOSAVE_OR_ONCHANGE",
-                        location:
-                          "app/admin/AdminReviewExplorer.tsx:RichArticleEditor:onChange:beforeFetch",
-                        message: "Admin auto-save triggered",
-                        data: {
-                          articleId: detail.id,
-                          htmlLength: html.length,
-                          chapoPreview: chapo
-                            ? chapo.slice(0, 80)
-                            : null,
-                          bodyLength: body.length,
-                        },
-                        timestamp: Date.now(),
-                      }),
-                    }).catch(() => {});
-                    // #endregion
+                    });
 
                     const res = await fetch(`/api/articles/${detail.id}`, {
                       method: "PATCH",
@@ -414,29 +377,15 @@ function AdminArticlePanel({
                     if (!res.ok) {
                       console.error("Erreur lors de la sauvegarde du contenu");
                     }
-                    // #region agent log
-                    fetch("http://127.0.0.1:7402/ingest/cd3f381d-1b5a-4cc6-8b78-0a0138a72f19", {
-                      method: "POST",
-                      headers: {
-                        "Content-Type": "application/json",
-                        "X-Debug-Session-Id": "fb943b",
-                      },
-                      body: JSON.stringify({
-                        sessionId: "fb943b",
-                        runId: "pre-fix",
-                        hypothesisId: "H_AUTOSAVE_OR_ONCHANGE",
-                        location:
-                          "app/admin/AdminReviewExplorer.tsx:RichArticleEditor:onChange:afterFetch",
-                        message: "Admin auto-save response",
-                        data: {
-                          articleId: detail.id,
-                          ok: res.ok,
-                          status: res.status,
-                        },
-                        timestamp: Date.now(),
-                      }),
-                    }).catch(() => {});
-                    // #endregion
+                    ingestDebug({
+                      sessionId: "fb943b",
+                      runId: "pre-fix",
+                      hypothesisId: "H_AUTOSAVE_OR_ONCHANGE",
+                      location:
+                        "app/admin/AdminReviewExplorer.tsx:RichArticleEditor:onChange:afterFetch",
+                      message: "Admin auto-save response",
+                      data: { articleId: detail.id, ok: res.ok, status: res.status },
+                    });
                   } catch (e) {
                     console.error(
                       "Erreur lors de la sauvegarde du contenu",

@@ -202,11 +202,18 @@ export async function GET(request: NextRequest) {
     .sort((a, b) => b.count - a.count)
     .slice(0, 8);
 
-  return NextResponse.json({
-    total,
-    mutuelles: mutuelleFacets,
-    rubriques: rubriqueFacets,
-    formats: formatFacets,
-  });
+  return NextResponse.json(
+    {
+      total,
+      mutuelles: mutuelleFacets,
+      rubriques: rubriqueFacets,
+      formats: formatFacets,
+    },
+    {
+      headers: {
+        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
+      },
+    }
+  );
 }
 

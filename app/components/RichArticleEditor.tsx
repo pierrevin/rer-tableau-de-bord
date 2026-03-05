@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
+import { ingestDebug } from "@/lib/ingest-debug";
 import { BubbleMenu } from "@tiptap/react/menus";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
@@ -76,26 +77,14 @@ export function RichArticleEditor({
       const json = editor.getJSON();
       const html = editor.getHTML();
 
-      // #region agent log
-      fetch("http://127.0.0.1:7402/ingest/cd3f381d-1b5a-4cc6-8b78-0a0138a72f19", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Debug-Session-Id": "fb943b",
-        },
-        body: JSON.stringify({
-          sessionId: "fb943b",
-          runId: "pre-fix",
-          hypothesisId: "H_AUTOSAVE_OR_ONCHANGE",
-          location: "app/components/RichArticleEditor.tsx:onUpdate",
-          message: "RichArticleEditor onUpdate called",
-          data: {
-            htmlLength: html.length,
-          },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
+      ingestDebug({
+        sessionId: "fb943b",
+        runId: "pre-fix",
+        hypothesisId: "H_AUTOSAVE_OR_ONCHANGE",
+        location: "app/components/RichArticleEditor.tsx:onUpdate",
+        message: "RichArticleEditor onUpdate called",
+        data: { htmlLength: html.length },
+      });
 
       onChange({ json, html });
     },
@@ -166,27 +155,14 @@ export function RichArticleEditor({
       ? classes.filter((c: string) => c !== "chapo")
       : [...classes, "chapo"];
 
-    // #region agent log
-    fetch("http://127.0.0.1:7402/ingest/cd3f381d-1b5a-4cc6-8b78-0a0138a72f19", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "fb943b",
-      },
-      body: JSON.stringify({
-        sessionId: "fb943b",
-        runId: "pre-fix",
-        hypothesisId: "H_CHAPO_TOGGLE",
-        location: "app/components/RichArticleEditor.tsx:handleToggleChapo",
-        message: "Toggle chapo clicked",
-        data: {
-          beforeClasses: classes,
-          afterClasses: nextClasses,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
+    ingestDebug({
+      sessionId: "fb943b",
+      runId: "pre-fix",
+      hypothesisId: "H_CHAPO_TOGGLE",
+      location: "app/components/RichArticleEditor.tsx:handleToggleChapo",
+      message: "Toggle chapo clicked",
+      data: { beforeClasses: classes, afterClasses: nextClasses },
+    });
 
     editor
       .chain()

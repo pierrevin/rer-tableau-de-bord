@@ -31,11 +31,12 @@ export async function GET(request: NextRequest) {
     prisma.etat.findMany({ orderBy: { ordre: "asc" } }),
   ]);
 
-  return NextResponse.json({
-    auteurs,
-    mutuelles,
-    rubriques,
-    formats,
-    etats,
-  });
+  return NextResponse.json(
+    { auteurs, mutuelles, rubriques, formats, etats },
+    {
+      headers: {
+        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
+      },
+    }
+  );
 }

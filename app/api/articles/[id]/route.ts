@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser, canEditArticles } from "@/lib/auth";
+import { ingestDebug } from "@/lib/ingest-debug";
 
 export async function GET(
   _request: NextRequest,
@@ -42,27 +43,14 @@ export async function PATCH(
 
   const body = await request.json();
 
-  // #region agent log
-  fetch("http://127.0.0.1:7402/ingest/cd3f381d-1b5a-4cc6-8b78-0a0138a72f19", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Debug-Session-Id": "fb943b",
-    },
-    body: JSON.stringify({
-      sessionId: "fb943b",
-      runId: "pre-fix",
-      hypothesisId: "H_API_PATCH",
-      location: "app/api/articles/[id]/route.ts:PATCH:beforeUpdate",
-      message: "PATCH /api/articles/[id] called",
-      data: {
-        articleId: id,
-        keys: Object.keys(body ?? {}),
-      },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion
+  ingestDebug({
+    sessionId: "fb943b",
+    runId: "pre-fix",
+    hypothesisId: "H_API_PATCH",
+    location: "app/api/articles/[id]/route.ts:PATCH:beforeUpdate",
+    message: "PATCH /api/articles/[id] called",
+    data: { articleId: id, keys: Object.keys(body ?? {}) },
+  });
   const {
     titre,
     chapo,
@@ -155,28 +143,14 @@ export async function PATCH(
     });
   }
 
-  // #region agent log
-  fetch("http://127.0.0.1:7402/ingest/cd3f381d-1b5a-4cc6-8b78-0a0138a72f19", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Debug-Session-Id": "fb943b",
-    },
-    body: JSON.stringify({
-      sessionId: "fb943b",
-      runId: "pre-fix",
-      hypothesisId: "H_API_PATCH",
-      location: "app/api/articles/[id]/route.ts:PATCH:afterUpdate",
-      message: "PATCH /api/articles/[id] completed",
-      data: {
-        articleId: id,
-        etatChanged,
-        newEtatId,
-      },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion
+  ingestDebug({
+    sessionId: "fb943b",
+    runId: "pre-fix",
+    hypothesisId: "H_API_PATCH",
+    location: "app/api/articles/[id]/route.ts:PATCH:afterUpdate",
+    message: "PATCH /api/articles/[id] completed",
+    data: { articleId: id, etatChanged, newEtatId },
+  });
 
   return NextResponse.json(article);
 }
