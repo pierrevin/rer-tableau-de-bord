@@ -105,6 +105,9 @@ _(à remplir après vérification : liste, filtres, pagination, détail, dépôt
 - Mise en place de la vue **Explorer** sur `/articles` (liste compacte à gauche + panneau de prévisualisation à droite, drawer sur mobile).
 - Amélioration de la lecture rapide : chapô mis en valeur, raccourcis clavier (flèches, Entrée, Ctrl/⌘+E), boutons de copie **HTML** et **texte formaté**, export Word relégué en action tertiaire.
 - Cartes de la colonne Explorer modernisées (sélecteur visuel, placement des pastilles, micro-interactions).
+- Introduction d’un **éditeur riche moderne** basé sur Tiptap pour le dépôt, l’édition et la relecture des articles : même composant `RichArticleEditor` utilisé dans `/articles/depot`, `/articles/[id]/edit` et dans le panneau de droite de `/admin/articles`.
+- Amélioration du **mode relecteur admin** (`/admin/articles`) : file d’articles par état, panneau de droite avec titre multi-ligne éditable, changement d’auteur, éditeur riche avec chapô marquable, auto-enregistrement, timeline d’états et historique déplacé en bas de page pour alléger l’en-tête.
+- Filtres d’état dédiés à la relecture : boutons **Tous / À relire / Corrigé / Validé / Publié** avec mise à jour immédiate de la file, badge d’état compact (une seule ligne) dans la colonne de gauche.
 
 **Dates, copies et nouvelles pages :**
 
@@ -165,7 +168,7 @@ _(à remplir après vérification : liste, filtres, pagination, détail, dépôt
   - **Filtres avancés** (mutuelles, rubriques, formats, dates) repliables dans un sous-bloc plus discret (fond légèrement grisé, bordure fine) pour ne pas prendre trop de hauteur par défaut, surtout sur mobile.  
 - **Fiche article** : même charte que la vue Explorer, sous forme de grande carte blanche : badges Format/Rubrique et État en tête, titre fort, métadonnées auteur/mutuelle/date, image éventuelle en haut, chapô en gras, contenu en texte courant, bloc « Post réseaux sociaux » encadré en bas.  
 
-**Documentation utilisateur :** [docs/utilisation.md](utilisation.md) (connexion, dépôt, import Word, relecture). **Déploiement :** Guide rédigé dans [docs/deploiement.md](docs/deploiement.md) (Vercel, Supabase, OVH). À faire : choisir l’hébergeur, configurer les variables d’env, lancer les migrations, déployer. UX éditeur de dépôt à retravailler plus tard.
+**Documentation utilisateur :** [docs/utilisation.md](utilisation.md) (connexion, dépôt, import Word, relecture, éditeur riche). **Déploiement :** Guide rédigé dans [docs/deploiement.md](docs/deploiement.md) (Vercel, Supabase, OVH). À faire : choisir l’hébergeur, configurer les variables d’env, lancer les migrations, déployer.
 
 **Résultat test serveur local (fin Sprint 5) :**  
 _(à remplir)_

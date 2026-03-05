@@ -25,7 +25,7 @@ export default async function AdminArticlesQueuePage({
 }: PageProps) {
   const q = searchParams?.q?.trim() || "";
   const page = Math.max(Number(searchParams?.page) || 1, 1);
-  const etatSlug = searchParams?.etat || "a_relire";
+  const etatSlug = searchParams?.etat ?? "a_relire";
   const mutuelleParam = searchParams?.mutuelleId || "";
   const rubriqueParam = searchParams?.rubriqueId || "";
   const formatParam = searchParams?.formatId || "";

@@ -13,11 +13,6 @@ type NavItem = {
 
 const NAV_ITEMS: NavItem[] = [
   {
-    href: "/admin",
-    label: "Vue admin",
-    description: "Aperçu général",
-  },
-  {
     href: "/admin/articles",
     label: "File d’articles",
     description: "Par état et actions rapides",
@@ -41,10 +36,10 @@ const NAV_ITEMS: NavItem[] = [
 
 export function RelecteursSidebar() {
   const pathname = usePathname();
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
 
   const containerBase =
-    "sticky top-4 flex flex-col gap-2 rounded-xl bg-white p-3 shadow-sm ring-1 ring-rer-border";
+    "flex min-h-screen flex-col border-r border-rer-border bg-white/95 px-2 py-3";
   const containerWidth = collapsed ? "w-16 items-center" : "w-64";
 
   return (

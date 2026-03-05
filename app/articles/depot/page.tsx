@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
+import RichArticleEditor from "../../components/RichArticleEditor";
 
 type Referentiels = {
   auteurs: { id: string; prenom: string; nom: string }[];
@@ -26,7 +27,8 @@ export default function DepotPage() {
 
   const [titre, setTitre] = useState("");
   const [chapo, setChapo] = useState("");
-  const [contenu, setContenu] = useState("");
+  const [contenuJson, setContenuJson] = useState<unknown | null>(null);
+  const [contenuHtml, setContenuHtml] = useState("");
   const [auteurId, setAuteurId] = useState("");
   const [mutuelleId, setMutuelleId] = useState("");
   const [rubriqueId, setRubriqueId] = useState("");
@@ -69,7 +71,8 @@ export default function DepotPage() {
       const data: ImportWordResponse = await res.json();
       if (data.titre != null) setTitre(data.titre);
       if (data.chapo != null) setChapo(data.chapo);
-      setContenu(data.contenu ?? "");
+      setContenuJson(null);
+      setContenuHtml(data.contenu ?? "");
     } catch {
       alert("Erreur lors de l’import.");
     } finally {
@@ -83,6 +86,11 @@ export default function DepotPage() {
       alert("Veuillez sélectionner un auteur.");
       return;
     }
+    const html = contenuHtml.trim();
+    if (!html) {
+      alert("Merci de saisir le contenu de l’article.");
+      return;
+    }
     setSubmitStatus("sending");
     try {
       const res = await fetch("/api/articles", {
@@ -91,7 +99,8 @@ export default function DepotPage() {
         body: JSON.stringify({
           titre,
           chapo: chapo || undefined,
-          contenu,
+          contenuHtml: html,
+          contenuJson,
           auteurId,
           mutuelleId: mutuelleId || undefined,
           rubriqueId: rubriqueId || undefined,
@@ -127,7 +136,8 @@ export default function DepotPage() {
   }
 
   const signesRef = ref.formats.find((f) => f.id === formatId)?.signesReference;
-  const signesCount = (contenu + titre + chapo).replace(/\s/g, "").length;
+  const plainFromHtml = contenuHtml.replace(/<[^>]+>/g, " ");
+  const signesCount = (plainFromHtml + titre + chapo).replace(/\s/g, "").length;
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
@@ -178,12 +188,12 @@ export default function DepotPage() {
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Contenu *</label>
-          <textarea
-            value={contenu}
-            onChange={(e) => setContenu(e.target.value)}
-            required
-            rows={12}
-            className="w-full border rounded px-3 py-2"
+          <RichArticleEditor
+            initialHtml={contenuHtml}
+            onChange={({ json, html }) => {
+              setContenuJson(json);
+              setContenuHtml(html);
+            }}
           />
           {signesRef != null && (
             <p className="text-sm text-gray-500 mt-1">

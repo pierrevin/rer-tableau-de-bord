@@ -3,12 +3,14 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import RichArticleEditor from "../../../components/RichArticleEditor";
 
 type Article = {
   id: string;
   titre: string;
   chapo: string | null;
   contenu: string;
+  contenuJson: unknown | null;
   legendePhoto: string | null;
   postRs: string | null;
   etatId: string | null;
@@ -42,7 +44,8 @@ export default function ArticleEditPage() {
 
   const [titre, setTitre] = useState("");
   const [chapo, setChapo] = useState("");
-  const [contenu, setContenu] = useState("");
+  const [contenuJson, setContenuJson] = useState<unknown | null>(null);
+  const [contenuHtml, setContenuHtml] = useState("");
   const [etatId, setEtatId] = useState("");
   const [mutuelleId, setMutuelleId] = useState("");
   const [rubriqueId, setRubriqueId] = useState("");
@@ -62,7 +65,8 @@ export default function ArticleEditPage() {
       if (a) {
         setTitre(a.titre);
         setChapo(a.chapo ?? "");
-        setContenu(a.contenu);
+        setContenuHtml(a.contenu);
+        setContenuJson(a.contenuJson ?? null);
         setEtatId(a.etatId ?? "");
         setMutuelleId(a.mutuelleId ?? "");
         setRubriqueId(a.rubriqueId ?? "");
@@ -87,6 +91,11 @@ export default function ArticleEditPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const html = contenuHtml.trim();
+    if (!html) {
+      alert("Merci de saisir le contenu de l’article.");
+      return;
+    }
     setSaving(true);
     try {
       const res = await fetch(`/api/articles/${id}`, {
@@ -95,7 +104,8 @@ export default function ArticleEditPage() {
         body: JSON.stringify({
           titre,
           chapo: chapo || null,
-          contenu,
+          contenuHtml: html,
+          contenuJson,
           etatId: etatId || null,
           mutuelleId: mutuelleId || null,
           rubriqueId: rubriqueId || null,
@@ -154,12 +164,13 @@ export default function ArticleEditPage() {
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Contenu *</label>
-          <textarea
-            value={contenu}
-            onChange={(e) => setContenu(e.target.value)}
-            required
-            rows={12}
-            className="w-full border rounded px-3 py-2"
+          <RichArticleEditor
+            initialJson={article.contenuJson ?? undefined}
+            initialHtml={article.contenu}
+            onChange={({ json, html }) => {
+              setContenuJson(json);
+              setContenuHtml(html);
+            }}
           />
         </div>
         <div>

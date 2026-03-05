@@ -3,11 +3,15 @@ import { RelecteursSidebar } from "../relecteurs/RelecteursSidebar";
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="mx-auto flex max-w-6xl gap-4 px-4 py-6 lg:gap-6 lg:py-8">
+    <div className="flex min-h-screen bg-rer-app">
       <RelecteursSidebar />
-      <div className="min-w-0 flex-1">
-        {children}
-      </div>
+      <main className="flex-1">
+        <div className="mx-auto max-w-6xl px-4 py-6 lg:py-8">
+          <div className="min-w-0">
+            {children}
+          </div>
+        </div>
+      </main>
     </div>
   );
 }

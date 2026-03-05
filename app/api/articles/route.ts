@@ -129,6 +129,8 @@ export async function POST(request: NextRequest) {
       titre,
       chapo,
       contenu,
+      contenuHtml,
+      contenuJson,
       auteurId,
       mutuelleId,
       rubriqueId,
@@ -139,7 +141,14 @@ export async function POST(request: NextRequest) {
       lienGoogleDoc,
     } = body;
 
-    if (!titre || typeof titre !== "string" || !contenu || typeof contenu !== "string" || !auteurId) {
+    const finalContenuHtml: string | null =
+      typeof contenuHtml === "string" && contenuHtml.trim()
+        ? contenuHtml
+        : typeof contenu === "string" && contenu.trim()
+        ? contenu
+        : null;
+
+    if (!titre || typeof titre !== "string" || !finalContenuHtml || !auteurId) {
       return NextResponse.json(
         { error: "Champs requis : titre, contenu, auteurId" },
         { status: 400 }
@@ -154,7 +163,8 @@ export async function POST(request: NextRequest) {
       data: {
         titre: titre.trim(),
         chapo: chapo?.trim() || null,
-        contenu: contenu.trim(),
+        contenu: finalContenuHtml.trim(),
+        contenuJson: contenuJson ?? null,
         auteurId,
         mutuelleId: mutuelleId || null,
         rubriqueId: rubriqueId || null,

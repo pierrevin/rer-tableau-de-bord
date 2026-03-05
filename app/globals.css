@@ -24,3 +24,16 @@ td {
   @apply align-top;
 }
 
+.prose .social-embed {
+  @apply rounded-xl bg-rer-app px-3 py-2 text-sm text-rer-text;
+}
+
+.prose p.chapo {
+  @apply font-semibold text-rer-text;
+}
+
+.prose ul li,
+.prose ol li {
+  @apply leading-snug;
+}
+

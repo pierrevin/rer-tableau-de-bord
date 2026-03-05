@@ -57,6 +57,7 @@ model Article {
   titre           String
   chapo           String?             @db.Text
   contenu         String              @db.Text
+  contenuJson     Json?
   legendePhoto    String?             @db.Text
   postRs          String?             @db.Text
   lienPhoto       String?

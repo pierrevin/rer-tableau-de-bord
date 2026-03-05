@@ -83,16 +83,19 @@ Dans toutes les vues de liste (Explorer, Cartes, Tableau) et sur la fiche articl
 
 ---
 
-## 4. Nouvel article
+## 4. Nouvel article – éditeur riche
 
 - **URL** : `/articles/depot`
 - **Accès** : tout utilisateur connecté (en pratique surtout auteurs).
 
 **Deux possibilités :**
 
-1. **Saisie directe**  
-   Remplir le formulaire : titre *, chapô, contenu *, auteur *, mutuelle, rubrique, format, légende photo, post RS.  
-   Le compteur de signes s’affiche si un format avec « signes de référence » est choisi.
+1. **Saisie directe avec éditeur riche**  
+   - Remplir le formulaire : titre *, chapô, contenu *, auteur *, mutuelle, rubrique, format, légende photo, post RS.  
+   - Le contenu principal se fait désormais dans un **éditeur riche type Medium/Gutenberg** :  
+     - Paragraphes, titres `H2` / `H3`, listes à puces, citations, liens.  
+     - Barre d’outils contextuelle et boutons en haut de l’éditeur (B, I, H2, H3, Liste, Citation).  
+   - Le compteur de signes s’affiche si un format avec « signes de référence » est choisi (calcul effectué à partir du texte saisi dans l’éditeur).
 
 2. **Importer un Word**  
    - Cliquer sur **« Importer un Word »**  
@@ -100,23 +103,33 @@ Dans toutes les vues de liste (Explorer, Cartes, Tableau) et sur la fiche articl
    - Le titre, le chapô et le contenu sont pré-remplis à partir du document (1er paragraphe court = titre, 2e = chapô, reste = contenu).  
    - Ajuster si besoin puis compléter auteur et autres champs avant de déposer.
 
-L’article est créé avec l’état **« À relire »**.
+L’article est créé avec l’état **« À relire »**. Le contenu est stocké à la fois en **HTML** (pour les exports et la consultation) et en **JSON structuré** (pour l’éditeur riche et les évolutions futures).
 
 ---
 
-## 5. Relecture et correction
+## 5. Relecture et correction (éditeur riche)
 
 Réservé aux rôles **Relecteur** et **Admin**.
 
 - Depuis la **fiche article** : cliquer sur **« Corriger »** → redirection vers la page d’édition.
 - Depuis le menu **Relecteurs** (`/relecteurs`) : accès à une vue Explorer dédiée (mêmes composants que `/articles`, mais appelée à être spécialisée pour les workflows de relecture).
 
-- **Page d’édition** : `/articles/[id]/edit`  
-  - Modifier : titre, chapô, contenu, mutuelle, rubrique, format, légende photo, post RS.  
-  - **Changer l’état** : À relire → Corrigé → Validé → Publié (sélecteur d’état).  
+- **Page d’édition auteur** : `/articles/[id]/edit`  
+  - Modifier : titre, chapô, contenu (via le même **éditeur riche** que sur le dépôt), mutuelle, rubrique, format, légende photo, post RS.  
+  - **Changer l’état** : À relire → Corrigé → Validé → Publié (sélecteur d’état, selon rôle).  
   - **Historique** : en bas de page, liste des changements d’état (qui a changé, quand, vers quel état).
 
-À chaque changement d’état, une entrée est enregistrée dans l’historique (traçabilité).
+- **Espace relecteurs / admin** : `/admin/articles`  
+  - Colonne de gauche : file d’articles filtrable par **état** (Tous, À relire, Corrigé, Validé, Publié) avec badge d’état compact, mutuelle, rubrique, format et âge de l’article.  
+  - Colonne de droite : panneau de relecture avec :  
+    - Titre multi-ligne directement éditable.  
+    - Sélecteur d’auteur (liste d’auteurs/mutuelles) modifiable.  
+    - Timeline d’états (À relire, Corrigé, Validé, Publié) cliquable pour changer l’état.  
+    - Contenu intégral dans le **même éditeur riche** que le dépôt, avec bouton Chapô pour mettre en avant le premier paragraphe.  
+    - Bloc « Post réseaux sociaux » dédié, prêt à être copié/collé.  
+    - Historique des changements d’état regroupé en bas du panneau.
+
+À chaque changement d’état, une entrée est enregistrée dans l’historique (traçabilité). Les modifications de contenu effectuées par les relecteurs sont sauvegardées dans le même modèle (HTML + JSON), ce qui permet de conserver un historique fiable et de futures évolutions (comparaison avant/après).
 
 ---
 
