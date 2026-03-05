@@ -53,6 +53,7 @@ type ArticlesExplorerViewProps = {
   since?: string;
   from?: string;
   to?: string;
+  mine?: string;
   showEtat: boolean;
 };
 
@@ -470,6 +471,7 @@ export function ArticlesExplorerView({
   since = "",
   from = "",
   to = "",
+  mine = "",
   showEtat,
 }: ArticlesExplorerViewProps) {
   const router = useRouter();
@@ -520,6 +522,7 @@ export function ArticlesExplorerView({
     if (since) params.set("since", since);
     if (from) params.set("from", from);
     if (to) params.set("to", to);
+    if (mine === "1") params.set("mine", "1");
     return `/api/articles?${params.toString()}`;
   };
 

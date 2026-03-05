@@ -20,6 +20,7 @@ type SearchParams = {
    to?: string;
   article?: string;
   view?: string;
+  mine?: string;
 };
 
 type PageProps = {
@@ -45,6 +46,7 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
   const fromParam = searchParams?.from || "";
   const toParam = searchParams?.to || "";
   const selectedArticleId = searchParams?.article || "";
+  const mineParam = searchParams?.mine === "1" ? "1" : "";
   const rawView = searchParams?.view;
   const view: "cards" | "explorer" | "table" =
     rawView === "table" || rawView === "cards" || rawView === "explorer"
@@ -66,6 +68,16 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
 
   if (etatSlug) {
     where.etat = { slug: etatSlug };
+  }
+
+  if (mineParam === "1") {
+    // Mes articles : filtrer sur l'auteur lié à l'utilisateur connecté.
+    if (!sessionUser?.auteurId) {
+      // Pas d'auteur associé -> aucun article à retourner
+      where.auteurId = "__none__";
+    } else {
+      where.auteurId = sessionUser.auteurId;
+    }
   }
 
   const createdAtFilter: any = {};
@@ -152,6 +164,7 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
               mutuelleId={mutuelleParam}
               rubriqueId={rubriqueParam}
               formatId={formatParam}
+          mine={mineParam}
               since={sinceParam}
               from={fromParam}
               to={toParam}
@@ -167,6 +180,7 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
               mutuelleId={mutuelleParam}
               rubriqueId={rubriqueParam}
               formatId={formatParam}
+              mine={mineParam}
               since={sinceParam}
               from={fromParam}
               to={toParam}
@@ -184,6 +198,7 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
               mutuelleId={mutuelleParam}
               rubriqueId={rubriqueParam}
               formatId={formatParam}
+              mine={mineParam}
               since={sinceParam}
               from={fromParam}
               to={toParam}

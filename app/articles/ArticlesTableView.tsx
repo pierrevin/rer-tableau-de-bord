@@ -32,6 +32,7 @@ type ArticlesTableViewProps = {
   since?: string;
   from?: string;
   to?: string;
+  mine?: string;
 };
 
 export function ArticlesTableView({
@@ -47,6 +48,7 @@ export function ArticlesTableView({
   since = "",
   from = "",
   to = "",
+  mine = "",
 }: ArticlesTableViewProps) {
   const [articles, setArticles] = useState<ArticleSummary[]>(initialArticles);
   const [hasMore, setHasMore] = useState(initialArticles.length < total);
@@ -73,6 +75,7 @@ export function ArticlesTableView({
     if (since) params.set("since", since);
     if (from) params.set("from", from);
     if (to) params.set("to", to);
+    if (mine === "1") params.set("mine", "1");
     return `/api/articles?${params.toString()}`;
   };
 

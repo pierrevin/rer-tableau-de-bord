@@ -12,11 +12,15 @@ Guide utilisateur pour la base de données d’articles (dépôt, relecture, con
   - **Relecteur** : relecteur@rer.local / `rer2025`
   - **Auteur** : auteur@rer.local / `rer2025`
 
-Seuls les utilisateurs connectés peuvent accéder au tableau de bord et aux actions selon leur rôle.
+Seuls les utilisateurs connectés peuvent accéder au tableau de bord et aux actions selon leur rôle : toute tentative d’accès direct à une page de l’application redirige automatiquement vers `/login` tant que l’utilisateur n’est pas authentifié.
 
 ---
 
 ## 2. Navigation et pages principales
+
+- **Page d’accueil (`/`)**  
+  - Si l’utilisateur est **Relecteur** ou **Admin** : redirection automatique vers la file de relecture `/admin/articles?etat=a_relire`.  
+  - Sinon (Auteur, Lecteur ou non connecté) : redirection vers la page Articles `/articles` en vue Explorer.
 
 - **Menu principal (header)**  
   En haut à droite du site, un menu permet d’accéder aux sections suivantes :

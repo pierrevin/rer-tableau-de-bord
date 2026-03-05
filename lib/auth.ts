@@ -25,10 +25,7 @@ export function canEditArticles(role: string | undefined): boolean {
  */
 export async function getSessionUser(req?: NextRequest): Promise<SessionUser | null> {
   if (req) {
-    const token = await getToken({
-      req,
-      secret: process.env.NEXTAUTH_SECRET,
-    });
+    const token = await getToken({ req });
     if (!token?.sub) return null;
     return {
       id: token.sub,
