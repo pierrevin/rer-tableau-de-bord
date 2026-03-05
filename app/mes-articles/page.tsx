@@ -124,7 +124,7 @@ export default async function MesArticlesPage({ searchParams }: PageProps) {
   const [articles, total, etats, groupedByEtat] = await Promise.all([
     prisma.article.findMany({
       where,
-      orderBy,
+      orderBy: orderBy as any,
       skip,
       take,
       include: {

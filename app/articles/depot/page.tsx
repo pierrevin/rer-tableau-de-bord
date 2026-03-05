@@ -118,7 +118,8 @@ export default function DepotPage() {
       setSubmitStatus("ok");
       setTitre("");
       setChapo("");
-      setContenu("");
+      setContenuHtml("");
+      setContenuJson(null);
       setLegendePhoto("");
       setPostRs("");
     } catch {

@@ -142,6 +142,15 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
     prisma.mutuelle.findMany({ orderBy: { nom: "asc" } }),
   ]);
 
+  const articleSummaries = articles.map((article) => ({
+    ...article,
+    dateDepot: article.dateDepot ? article.dateDepot.toISOString() : null,
+    datePublication: article.datePublication
+      ? article.datePublication.toISOString()
+      : null,
+    createdAt: article.createdAt.toISOString(),
+  }));
+
   const totalPages = Math.max(Math.ceil(total / take), 1);
 
   return (
@@ -155,7 +164,7 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
         <section aria-label="Liste des articles" className="mt-4 space-y-3">
           {view === "table" ? (
             <ArticlesTableView
-              initialArticles={articles}
+              initialArticles={articleSummaries}
               total={total}
               initialPage={page}
               pageSize={take}
@@ -171,7 +180,7 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
             />
           ) : view === "explorer" ? (
             <ArticlesExplorerView
-              articles={articles}
+              articles={articleSummaries}
               total={total}
               initialPage={page}
               pageSize={take}
@@ -189,7 +198,7 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
             />
           ) : (
             <ArticlesCardsView
-              initialArticles={articles}
+              initialArticles={articleSummaries}
               total={total}
               initialPage={page}
               pageSize={take}

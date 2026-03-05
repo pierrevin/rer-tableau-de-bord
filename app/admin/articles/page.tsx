@@ -112,10 +112,19 @@ export default async function AdminArticlesQueuePage({
     prisma.etat.findMany({ orderBy: { ordre: "asc" } }),
   ]);
 
+  const articleSummaries = articles.map((article) => ({
+    ...article,
+    dateDepot: article.dateDepot ? article.dateDepot.toISOString() : null,
+    datePublication: article.datePublication
+      ? article.datePublication.toISOString()
+      : null,
+    createdAt: article.createdAt.toISOString(),
+  }));
+
   return (
     <section aria-label="File d’articles à relire" className="space-y-3">
       <AdminReviewExplorer
-        articles={articles}
+        articles={articleSummaries}
         total={total}
         initialPage={page}
         pageSize={take}

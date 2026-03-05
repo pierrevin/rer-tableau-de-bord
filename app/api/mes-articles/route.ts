@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
   const [articles, total, etats, groupedByEtat] = await Promise.all([
     prisma.article.findMany({
       where,
-      orderBy,
+      orderBy: orderBy as any,
       skip,
       take: limit,
       include: {

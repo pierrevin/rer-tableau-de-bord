@@ -290,7 +290,6 @@ export function RichArticleEditor({
       {!readOnly && (
         <BubbleMenu
           editor={editor}
-          tippyOptions={{ duration: 100 }}
           className="flex gap-1 rounded-full bg-rer-text px-3 py-1.5 text-[12px] text-white shadow-md"
         >
           <button
