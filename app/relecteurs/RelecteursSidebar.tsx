@@ -15,17 +15,22 @@ const NAV_ITEMS: NavItem[] = [
   {
     href: "/relecteurs",
     label: "Vue relecteurs",
-    description: "Tableau de bord des articles",
+    description: "Aperçu général",
   },
   {
-    href: "/articles?view=explorer&mode=relecteur",
-    label: "Articles",
-    description: "Ouvrir la vue Explorer filtrée",
+    href: "/relecteurs/articles",
+    label: "File d’articles",
+    description: "Par état et actions rapides",
   },
   {
-    label: "Workflow",
-    description: "Transitions, notifications…",
-    comingSoon: true,
+    href: "/relecteurs/utilisateurs",
+    label: "Utilisateurs",
+    description: "Rôles et rattachements",
+  },
+  {
+    href: "/relecteurs/referentiels",
+    label: "Référentiels",
+    description: "Formats, rubriques, mutuelles, auteurs",
   },
   {
     label: "Statistiques",
