@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getSessionUser } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -15,6 +16,7 @@ export async function GET(request: NextRequest) {
   const sinceParam = searchParams.get("since") ?? "";
   const fromParam = searchParams.get("from") ?? "";
   const toParam = searchParams.get("to") ?? "";
+  const mineParam = searchParams.get("mine") ?? "";
 
   const where: any = {};
 
@@ -28,6 +30,18 @@ export async function GET(request: NextRequest) {
 
   if (etatSlug) {
     where.etat = { slug: etatSlug };
+  }
+
+  // Filtre "Mes articles" : articles dont l'utilisateur connecté est l'auteur.
+  if (mineParam === "1") {
+    const sessionUser = await getSessionUser(request);
+    if (!sessionUser?.auteurId) {
+      return NextResponse.json(
+        { error: "Utilisateur non authentifié ou auteur non associé" },
+        { status: 401 }
+      );
+    }
+    where.auteurId = sessionUser.auteurId;
   }
 
   const dateFilter: any = {};

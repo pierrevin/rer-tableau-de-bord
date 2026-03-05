@@ -119,6 +119,7 @@ _(à remplir après vérification : liste, filtres, pagination, détail, dépôt
 - Création des pages dédiées :  
   - `/mes-articles` → redirection vers `/articles?mine=1` (filtre « mes articles » à implémenter côté backend).  
   - `/relecteurs` → redirection vers `/articles?view=explorer&mode=relecteur` (future vue dédiée relecteurs/admin).
+  - Backend mis à jour : le paramètre `mine=1` de `/api/articles` filtre désormais les articles sur `auteurId` (utilisateur connecté), et `/relecteurs` s’appuie sur un layout spécifique avec sidebar pliable.
 
 **À faire (images et pagination avancée) :**
 

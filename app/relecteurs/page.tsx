@@ -1,11 +1,30 @@
-import { redirect } from "next/navigation";
-
 export const dynamic = "force-dynamic";
 
 export default function RelecteursPage() {
-  // Pour le moment, page ouverte à tous qui réutilise la liste d’articles
-  // en mode relecteur. On branchera les restrictions d’accès et le filtrage
-  // avancé (états, etc.) quand les utilisateurs seront créés.
-  redirect("/articles?view=explorer&mode=relecteur");
+  return (
+    <section className="space-y-4 rounded-xl bg-white p-5 shadow-sm ring-1 ring-rer-border">
+      <header className="space-y-1">
+        <h1 className="text-lg font-semibold text-rer-text">
+          Espace relecteurs / admin
+        </h1>
+        <p className="text-sm text-rer-muted">
+          Cette zone regroupera les outils de relecture, de paramétrage éditorial
+          et les statistiques. Pour l’instant, vous pouvez utiliser la vue
+          Explorer des articles pour travailler sur la file d&apos;articles.
+        </p>
+      </header>
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <a
+          href="/articles?view=explorer&mode=relecteur"
+          className="inline-flex items-center gap-2 rounded-full bg-rer-blue px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#1e3380]"
+        >
+          Ouvrir la vue Explorer des articles
+        </a>
+        <p className="text-xs text-rer-subtle">
+          (Les autres sections du menu sont en cours de conception.)
+        </p>
+      </div>
+    </section>
+  );
 }
 
