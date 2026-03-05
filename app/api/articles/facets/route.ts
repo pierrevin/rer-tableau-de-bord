@@ -21,17 +21,31 @@ export async function GET(request: NextRequest) {
     ];
   }
 
-  const createdAtFilter: any = {};
+  const dateFilter: any = {};
   if (fromParam) {
-    createdAtFilter.gte = new Date(fromParam);
+    dateFilter.gte = new Date(fromParam);
   } else if (sinceParam) {
-    createdAtFilter.gte = new Date(sinceParam);
+    dateFilter.gte = new Date(sinceParam);
   }
   if (toParam) {
-    createdAtFilter.lte = new Date(toParam);
+    dateFilter.lte = new Date(toParam);
   }
-  if (Object.keys(createdAtFilter).length > 0) {
-    baseWhere.createdAt = createdAtFilter;
+  if (Object.keys(dateFilter).length > 0) {
+    baseWhere.OR = [
+      ...(baseWhere.OR ?? []),
+      {
+        AND: [
+          { datePublication: { not: null } },
+          { datePublication: dateFilter },
+        ],
+      },
+      {
+        AND: [
+          { datePublication: null },
+          { createdAt: dateFilter },
+        ],
+      },
+    ];
   }
 
   const mutuelleIdsFilter = mutuelleParam

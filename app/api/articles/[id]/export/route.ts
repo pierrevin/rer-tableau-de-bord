@@ -17,7 +17,7 @@ function buildText(article: any): string {
   lines.push("");
   const meta: string[] = [];
   if (article.auteur) {
-    meta.push(`Auteur : ${article.auteur.prenom} ${article.auteur.nom}`);
+    meta.push(`${article.auteur.prenom} ${article.auteur.nom}`);
   }
   if (article.mutuelle) meta.push(`Mutuelle : ${article.mutuelle.nom}`);
   if (article.rubrique) meta.push(`Rubrique : ${article.rubrique.libelle}`);
@@ -45,7 +45,7 @@ function buildHtml(article: any): string {
   const metaParts: string[] = [];
   if (article.auteur) {
     metaParts.push(
-      `Auteur : ${article.auteur.prenom} ${article.auteur.nom}`
+      `${article.auteur.prenom} ${article.auteur.nom}`
     );
   }
   if (article.mutuelle) metaParts.push(`Mutuelle : ${article.mutuelle.nom}`);

@@ -106,10 +106,63 @@ _(à remplir après vérification : liste, filtres, pagination, détail, dépôt
 - Amélioration de la lecture rapide : chapô mis en valeur, raccourcis clavier (flèches, Entrée, Ctrl/⌘+E), boutons de copie **HTML** et **texte formaté**, export Word relégué en action tertiaire.
 - Cartes de la colonne Explorer modernisées (sélecteur visuel, placement des pastilles, micro-interactions).
 
+**Dates, copies et nouvelles pages :**
+
+- Clarification de la sémantique des dates :  
+  - `dateDepot` = date de dépôt par l’utilisateur (import historique ou dépôt en ligne).  
+  - `datePublication` = date de validation par un relecteur/admin (premier passage à l’état « valide », figée ensuite).  
+  - `createdAt` / `updatedAt` = dates techniques (création / dernière modification).  
+- Affichage unifié dans l’UI : sur les cartes (Cartes, Explorer, Tableau) et la fiche article, la date affichée est toujours **« Publié le JJ/MM/AAAA »** calculée via `datePublication ?? dateDepot ?? createdAt`.  
+- Filtres de date sur `/articles` : boutons **Depuis 1 / 3 / 6 mois** + **période personnalisée**, qui filtrent sur `datePublication` (si renseignée) avec repli sur `createdAt` pour les articles plus anciens.  
+- Boutons de copie dans la vue Explorer : **« Copier HTML »** (HTML propre, prêt à coller dans un CMS) et **« Copier texte »** (texte simple structuré, compatible Google Docs / Word) + export Word en option tertiaire.  
+- Navigation principale enrichie dans le header : liens **Articles**, **Mes articles** et **Relecteurs** accessibles pour l’instant à tous les utilisateurs.  
+- Création des pages dédiées :  
+  - `/mes-articles` → redirection vers `/articles?mine=1` (filtre « mes articles » à implémenter côté backend).  
+  - `/relecteurs` → redirection vers `/articles?view=explorer&mode=relecteur` (future vue dédiée relecteurs/admin).
+
 **À faire (images et pagination avancée) :**
 
 - Définir où et comment seront **hébergées les photos** (CDN/bucket ou autre) et ajouter une route d’API dédiée pour un téléchargement fiable (`Content-Disposition: attachment`).
-- Généraliser et stabiliser le **scroll infini** sur toutes les vues de `/articles` (Cartes, Explorer, Tableau) en s’appuyant sur l’API paginée `/api/articles` et en supprimant la pagination classique.
+- Stabiliser et monitorer le **scroll infini** sur les trois vues de `/articles` (Cartes, Explorer, Tableau) déjà branchées sur l’API paginée `/api/articles` (performances, UX mobile).
+
+### Charte graphique RER – tableau de bord
+
+**Palette de couleurs (approximations à affiner via l’inspecteur)**
+
+- **Fond appli / dashboard** : `#F5F7FA` (fond très clair), `#FFFFFF` (cartes, panneaux).  
+- **Fond éditorial (inspiré du site)** : `#F7F3E2` (crème).  
+- **Bleu RER principal** : `#243B8F` – entêtes importantes, onglet actif, liens majeurs.  
+- **Orange RER d’accent** : `#F1663C` – boutons primaires, titres forts sur fond bleu, mises en avant.  
+- **Neutres / texte** : `#111827` (texte principal), `#4B5563` (secondaire), `#9CA3AF` (texte peu important), `#E5E7EB` (bordures).
+
+**Badges / statuts**
+
+- Santé / positif / validé : fond `#D1FAE5`, texte `#047857`.  
+- Rubriques (exemples) : Santé `#16A34A`, Vie pratique `#EA580C`, Société `#DB2777`, Produits & services `#0EA5E9`.  
+- Formats : Article (fond `#E5E7EB`, texte foncé), Dossier `#6366F1`, Brève `#EC4899`.
+
+**Typographie**
+
+- Police de base :  
+  ```css
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  ```  
+- H1 (titre de page) : 28–32 px, `font-extrabold`/`font-black`, couleur `#111827`.  
+- H2 (sections) : 20–22 px, `font-semibold`.  
+- Titre de carte article : 16–18 px, `font-semibold`.  
+- Corps de texte : 14–15 px, `font-normal`, couleur `#4B5563`.  
+- Métadonnées / labels : 11–12 px, parfois `uppercase`, `tracking-wide` léger.
+
+**Composants**
+
+- **Header global** : une seule barre en haut de l’écran, avec logo RER à gauche et le nom de l’outil. Selon la page, cette barre peut afficher le **titre de page et ses actions principales** (ex. sur `/articles` : « Liste des articles » + bouton « Nouvel article ») pour éviter un double header.  
+- **Cartes d’articles** : fond blanc, coins 16–20 px, ombre douce, image pleine hauteur à gauche (`object-cover`), badges Format + Rubrique en tête, métadonnées (auteur, mutuelle, date de publication) en bas.  
+- **Boutons** : primaires orange `#F1663C` (texte blanc, arrondis, ombre légère) ; secondaires fond blanc + bordure `#E5E7EB`, texte gris/bleu, survol gris très clair.  
+  - Les liens texte génériques du site peuvent être stylés en bleu RER (`a:not([class]) { color: #243B8F; }`), **mais les boutons doivent conserver leur texte blanc sur fond orange** (ne pas leur appliquer la couleur des liens globaux).  
+- **Champs de recherche / filtres** : fond blanc, bordure `#D1D5DB`, coins 8 px, focus `border-color: #111827` + ombre légère.  
+- **Barre de recherche / filtres articles** : carte blanche pleine largeur (coins 12–16 px, légère ombre, bordure `#E5E7EB`) qui contient le champ de recherche, le compteur d’articles et les actions de filtres.  
+  - **Filtres avancés** (mutuelles, rubriques, formats, dates) repliables dans un sous-bloc plus discret (fond légèrement grisé, bordure fine) pour ne pas prendre trop de hauteur par défaut, surtout sur mobile.  
+- **Fiche article** : même charte que la vue Explorer, sous forme de grande carte blanche : badges Format/Rubrique et État en tête, titre fort, métadonnées auteur/mutuelle/date, image éventuelle en haut, chapô en gras, contenu en texte courant, bloc « Post réseaux sociaux » encadré en bas.  
 
 **Documentation utilisateur :** [docs/utilisation.md](utilisation.md) (connexion, dépôt, import Word, relecture). **Déploiement :** Guide rédigé dans [docs/deploiement.md](docs/deploiement.md) (Vercel, Supabase, OVH). À faire : choisir l’hébergeur, configurer les variables d’env, lancer les migrations, déployer. UX éditeur de dépôt à retravailler plus tard.
 
@@ -134,6 +187,6 @@ _(à remplir)_
 
 | Fichier | Contenu |
 | ------- | ------- |
-| [docs/utilisation.md](utilisation.md) | Guide utilisateur : connexion, explorer la base, dépôt (saisie + import Word), relecture (corriger, états, historique). À tester plus tard. |
+| [docs/utilisation.md](utilisation.md) | Guide utilisateur : connexion, navigation (Articles, Mes articles, Relecteurs), vues Cartes / Explorer / Tableau, filtres et dates, dépôt (saisie + import Word), relecture (corriger, états, historique), copies HTML/texte et exports. |
 | [docs/deploiement.md](deploiement.md) | Déploiement (Vercel, Supabase, OVH), variables d’env, checklist. |
 | [docs/plan.md](plan.md) | Plan du projet, analyse BDD, sprints. |

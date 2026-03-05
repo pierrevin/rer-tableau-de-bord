@@ -132,7 +132,7 @@ export default function DepotPage() {
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold">Déposer un article</h1>
+        <h1 className="text-2xl font-semibold">Nouvel article</h1>
         <Link href="/articles" className="text-blue-600 hover:underline">
           ← Liste des articles
         </Link>
@@ -276,7 +276,7 @@ export default function DepotPage() {
             disabled={submitStatus === "sending"}
             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
           >
-            {submitStatus === "sending" ? "Envoi…" : "Déposer l’article"}
+            {submitStatus === "sending" ? "Envoi…" : "Créer l’article"}
           </button>
           {submitStatus === "ok" && (
             <span className="text-green-600">Article déposé (état « À relire »).</span>

@@ -14,6 +14,9 @@ type ArticleSummary = {
   rubrique: { libelle: string } | null;
   format: { libelle: string } | null;
   etat: { libelle: string } | null;
+  dateDepot: string | null;
+  datePublication: string | null;
+  createdAt: string;
 };
 
 type ArticlesTableViewProps = {
@@ -132,10 +135,10 @@ export function ArticlesTableView({
   if (!articles.length) {
     return (
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-slate-200 bg-white shadow-sm ring-1 ring-slate-200">
+        <table className="min-w-full divide-y divide-rer-border bg-white shadow-sm ring-1 ring-rer-border">
           <tbody>
             <tr>
-              <td className="px-3 py-6 text-center text-sm text-slate-500">
+              <td className="px-3 py-6 text-center text-sm text-rer-muted">
                 Aucun article ne correspond à ces critères. Essayez
                 d&apos;élargir votre recherche ou de modifier les filtres.
               </td>
@@ -149,41 +152,44 @@ export function ArticlesTableView({
   return (
     <>
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-slate-200 bg-white shadow-sm ring-1 ring-slate-200">
-          <thead className="bg-slate-50">
+        <table className="min-w-full divide-y divide-rer-border bg-white shadow-sm ring-1 ring-rer-border">
+          <thead className="bg-rer-blue text-white">
             <tr>
-              <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
+              <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-white/90">
                 Photo
               </th>
-              <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
+              <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-white/90">
                 Titre
               </th>
-              <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
+              <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-white/90">
                 Auteur
               </th>
-              <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
+              <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-white/90">
                 Mutuelle
               </th>
-              <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
+              <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-white/90">
                 Rubrique
               </th>
-              <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
+              <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-white/90">
                 Format
               </th>
-              <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
+              <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-white/90">
+                Publié le
+              </th>
+              <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-white/90">
                 État
               </th>
-              <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-slate-600">
+              <th className="px-3 py-2 text-right text-[11px] font-semibold uppercase tracking-wide text-white/90">
                 Actions
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-200">
+          <tbody className="divide-y divide-rer-border">
             {articles.map((article) => (
-              <tr key={article.id} className="hover:bg-slate-50">
+              <tr key={article.id} className="hover:bg-rer-app">
                 <td className="px-3 py-2 align-top">
                   {article.lienPhoto ? (
-                    <div className="h-14 w-14 overflow-hidden rounded-md border border-slate-200 bg-slate-100">
+                    <div className="h-14 w-14 overflow-hidden rounded-md border border-rer-border bg-rer-app">
                       <img
                         src={article.lienPhoto}
                         alt={article.legendePhoto || article.titre}
@@ -192,50 +198,61 @@ export function ArticlesTableView({
                       />
                     </div>
                   ) : (
-                    <div className="h-14 w-14 rounded-md border border-dashed border-slate-200 bg-slate-50" />
+                    <div className="h-14 w-14 rounded-md border border-dashed border-rer-border bg-rer-app" />
                   )}
                 </td>
-                <td className="px-3 py-2 text-sm text-slate-900 align-top">
+                <td className="px-3 py-2 align-top text-sm text-rer-text">
                   <Link
                     href={`/articles/${article.id}`}
-                    className="font-medium text-slate-900 hover:underline"
+                    className="font-semibold text-rer-blue hover:underline"
                   >
                     {article.titre}
                   </Link>
                   {article.chapo && (
-                    <p className="mt-0.5 line-clamp-2 text-xs text-slate-500">
+                    <p className="mt-0.5 line-clamp-2 text-xs text-rer-muted">
                       {article.chapo}
                     </p>
                   )}
                 </td>
-                <td className="px-3 py-2 text-sm text-slate-700">
+                <td className="px-3 py-2 text-sm text-rer-muted">
                   {article.auteur
                     ? `${article.auteur.prenom} ${article.auteur.nom}`
                     : "—"}
                 </td>
-                <td className="px-3 py-2 text-sm text-slate-700">
+                <td className="px-3 py-2 text-sm text-rer-muted">
                   {article.mutuelle?.nom || "—"}
                 </td>
-                <td className="px-3 py-2 text-sm text-slate-700">
+                <td className="px-3 py-2 text-sm text-rer-muted">
                   {article.rubrique?.libelle || "—"}
                 </td>
-                <td className="px-3 py-2 text-sm text-slate-700">
+                <td className="px-3 py-2 text-sm text-rer-muted">
                   {article.format?.libelle || "—"}
                 </td>
-                <td className="px-3 py-2 text-sm text-slate-700">
+                <td className="px-3 py-2 text-sm text-rer-muted">
+                {(() => {
+                  const d =
+                    article.datePublication ??
+                    article.dateDepot ??
+                    article.createdAt;
+                  return d
+                    ? new Date(d).toLocaleDateString("fr-FR")
+                    : "—";
+                })()}
+              </td>
+              <td className="px-3 py-2 text-sm text-rer-muted">
                   {article.etat?.libelle || "—"}
                 </td>
                 <td className="px-3 py-2 text-right text-sm">
                   <div className="inline-flex items-center gap-2">
                     <Link
                       href={`/articles/${article.id}`}
-                      className="text-xs font-medium text-slate-700 hover:text-slate-900"
+                      className="text-xs font-medium text-rer-blue hover:text-rer-text"
                     >
                       Voir
                     </Link>
                     <Link
                       href={`/articles/${article.id}/edit`}
-                      className="text-xs font-medium text-slate-700 hover:text-slate-900"
+                      className="text-xs font-medium text-rer-blue hover:text-rer-text"
                     >
                       Corriger
                     </Link>

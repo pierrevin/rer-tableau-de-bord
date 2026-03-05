@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { getSessionUser, canEditArticles } from "@/lib/auth";
 import { ArticlesExplorerView } from "./ArticlesCardsExplorer";
 import { ArticlesCardsView } from "./ArticlesCardsView";
 import { ArticlesTableView } from "./ArticlesTableView";
@@ -30,6 +31,9 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
     orderBy: { createdAt: "desc" },
     select: { createdAt: true },
   });
+
+  const sessionUser = await getSessionUser();
+  const showEtat = canEditArticles(sessionUser?.role);
 
   const q = searchParams?.q?.trim() || "";
   const page = Math.max(Number(searchParams?.page) || 1, 1);
@@ -129,76 +133,12 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
   const totalPages = Math.max(Math.ceil(total / take), 1);
 
   return (
-    <main className="min-h-screen bg-slate-50">
+    <main>
       <div className="mx-auto max-w-6xl px-4 py-8">
-        <header className="mb-8 border-b border-slate-200 pb-4">
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <h1 className="text-2xl font-semibold text-slate-900">
-                Liste des articles
-              </h1>
-              <p className="mt-1 text-sm text-slate-600">
-                Rechercher, filtrer par état ou par mutuelle, puis ouvrir un
-                article pour le lire, le corriger ou l&apos;exporter.
-              </p>
-            </div>
-            <Link
-              href="/articles/depot"
-              className="inline-flex items-center rounded-full bg-slate-900 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50"
-            >
-              Déposer un article
-            </Link>
-          </div>
-        </header>
-
         <ArticlesFiltersBar
           total={total}
           lastCreatedAt={lastArticle?.createdAt?.toISOString() ?? null}
         />
-
-        <div className="mb-3 flex flex-wrap items-center justify-end gap-2 text-xs font-medium text-slate-600">
-          <div className="flex items-center gap-1 rounded-full border border-slate-200 bg-slate-100 p-1">
-            <Link
-              href={{
-                pathname: "/articles",
-                query: { ...searchParams, view: "cards", page: String(page) },
-              }}
-              className={`rounded-full px-3 py-1 ${
-                view === "cards"
-                  ? "bg-white text-slate-900 shadow-sm"
-                  : "hover:bg-white/60"
-              }`}
-            >
-              Cartes
-            </Link>
-            <Link
-              href={{
-                pathname: "/articles",
-                query: { ...searchParams, view: "explorer", page: String(page) },
-              }}
-              className={`rounded-full px-3 py-1 ${
-                view === "explorer"
-                  ? "bg-white text-slate-900 shadow-sm"
-                  : "hover:bg-white/60"
-              }`}
-            >
-              Explorer
-            </Link>
-            <Link
-              href={{
-                pathname: "/articles",
-                query: { ...searchParams, view: "table", page: String(page) },
-              }}
-              className={`rounded-full px-3 py-1 ${
-                view === "table"
-                  ? "bg-white text-slate-900 shadow-sm"
-                  : "hover:bg-white/60"
-              }`}
-            >
-              Tableau
-            </Link>
-          </div>
-        </div>
 
         <section aria-label="Liste des articles" className="mt-4 space-y-3">
           {view === "table" ? (
@@ -230,6 +170,7 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
               since={sinceParam}
               from={fromParam}
               to={toParam}
+              showEtat={showEtat}
               initialSelectedId={selectedArticleId || undefined}
             />
           ) : (
@@ -253,7 +194,7 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
         {/* Bouton flottant mobile pour déposer un article */}
         <Link
           href="/articles/depot"
-          className="fixed bottom-6 right-6 z-30 inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-medium text-white shadow-lg hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 lg:hidden"
+          className="fixed bottom-6 right-6 z-30 inline-flex items-center gap-2 rounded-full bg-rer-orange px-4 py-2 text-sm font-semibold text-white shadow-lg hover:bg-[#e25730] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rer-orange focus-visible:ring-offset-2 focus-visible:ring-offset-rer-app lg:hidden"
         >
           <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/10 text-base leading-none">
             +

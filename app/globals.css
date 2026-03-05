@@ -8,11 +8,11 @@ body {
 }
 
 body {
-  @apply bg-slate-50 text-slate-900 antialiased;
+  @apply bg-rer-app text-rer-text antialiased font-sans;
 }
 
-a {
-  @apply text-sky-700 hover:text-sky-900;
+a:not([class]) {
+  @apply text-rer-blue hover:text-rer-blue/80;
 }
 
 table {

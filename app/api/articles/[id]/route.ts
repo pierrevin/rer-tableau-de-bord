@@ -73,6 +73,22 @@ export async function PATCH(
   const newEtatId = (data.etatId as string | null) ?? previousEtatId;
   const etatChanged = newEtatId !== previousEtatId;
 
+  // Si l'état change vers \"valide\" et que datePublication est encore vide,
+  // on fige la date de validation à maintenant.
+  if (etatChanged && newEtatId) {
+    const etatCible = await prisma.etat.findUnique({
+      where: { id: newEtatId },
+      select: { slug: true },
+    });
+    if (
+      etatCible?.slug === "valide" &&
+      !existing.datePublication &&
+      data.datePublication === undefined
+    ) {
+      data.datePublication = new Date();
+    }
+  }
+
   const article = await prisma.article.update({
     where: { id },
     data,

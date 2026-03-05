@@ -16,6 +16,9 @@ type ArticleSummary = {
   rubrique: { libelle: string } | null;
   format: { libelle: string } | null;
   etat: { libelle: string; slug: string } | null;
+  dateDepot: string | null;
+  datePublication: string | null;
+  createdAt: string;
 };
 
 type ArticleDetail = {
@@ -27,6 +30,8 @@ type ArticleDetail = {
   legendePhoto: string | null;
   postRs: string | null;
   dateDepot: string | null;
+  datePublication: string | null;
+  createdAt: string;
   auteur: { prenom: string; nom: string } | null;
   mutuelle: { nom: string } | null;
   rubrique: { libelle: string } | null;
@@ -48,9 +53,10 @@ type ArticlesExplorerViewProps = {
   since?: string;
   from?: string;
   to?: string;
+  showEtat: boolean;
 };
 
-function getEtatBadgeClasses(slug?: string, active?: boolean): string {
+export function getEtatBadgeClasses(slug?: string, active?: boolean): string {
   const base =
     "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium";
 
@@ -58,83 +64,84 @@ function getEtatBadgeClasses(slug?: string, active?: boolean): string {
     case "a_relire":
       return (
         base +
-        " border-amber-200 bg-amber-50 text-amber-800" +
-        (active ? " ring-1 ring-amber-300" : "")
+        " border-[#FACC15]/60 bg-[#FEF9C3] text-[#854D0E]" +
+        (active ? " ring-1 ring-[#FACC15]/80" : "")
       );
     case "corrige":
       return (
         base +
-        " border-sky-200 bg-sky-50 text-sky-800" +
-        (active ? " ring-1 ring-sky-300" : "")
+        " border-[#BFDBFE] bg-[#EFF6FF] text-[#1D4ED8]" +
+        (active ? " ring-1 ring-[#93C5FD]" : "")
       );
     case "valide":
       return (
         base +
-        " border-emerald-200 bg-emerald-50 text-emerald-800" +
-        (active ? " ring-1 ring-emerald-300" : "")
+        " border-transparent bg-[#D1FAE5] text-[#047857]" +
+        (active ? " ring-1 ring-[#6EE7B7]" : "")
       );
     case "publie":
       return (
         base +
-        " border-emerald-500 bg-emerald-600 text-white" +
-        (active ? " ring-1 ring-emerald-400" : "")
+        " border-[#22C55E] bg-[#16A34A] text-white" +
+        (active ? " ring-1 ring-[#4ADE80]" : "")
       );
     default:
       return (
         base +
-        " border-slate-200 bg-slate-100 text-slate-700" +
-        (active ? " ring-1 ring-slate-300" : "")
+        " border-rer-border bg-rer-app text-rer-muted" +
+        (active ? " ring-1 ring-rer-border" : "")
       );
   }
 }
 
-function getFormatBadgeClasses(libelle?: string): string {
+export function getFormatBadgeClasses(libelle?: string): string {
   const base =
     "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium";
   if (!libelle) {
-    return base + " bg-sky-50 text-sky-800";
+    return base + " bg-rer-app text-rer-muted";
   }
   const key = libelle.toLowerCase();
 
   if (key.includes("brève")) {
-    return base + " bg-pink-50 text-pink-800";
+    return base + " bg-[#FDF2F8] text-[#BE185D]";
   }
   if (key.includes("dossier")) {
-    return base + " bg-indigo-50 text-indigo-800";
+    return base + " bg-[#EEF2FF] text-[#4F46E5]";
   }
   if (key.includes("focus")) {
-    return base + " bg-amber-50 text-amber-800";
+    return base + " bg-[#FFFBEB] text-[#92400E]";
   }
   if (key.includes("actus") || key.includes("actu")) {
-    return base + " bg-sky-50 text-sky-800";
+    return base + " bg-[#EFF6FF] text-[#1D4ED8]";
   }
-  return base + " bg-slate-100 text-slate-800";
+  // Article ou autres formats
+  return base + " bg-[#E5E7EB] text-[#111827]";
 }
 
-function getRubriqueBadgeClasses(libelle?: string): string {
+export function getRubriqueBadgeClasses(libelle?: string): string {
   const base =
     "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium";
   if (!libelle) {
-    return base + " bg-violet-600/90 text-white";
+    return base + " bg-[#4B5563] text-white";
   }
   const key = libelle.toLowerCase();
 
   if (key.includes("sant")) {
-    return base + " bg-emerald-600/90 text-white";
+    return base + " bg-[#16A34A] text-white";
   }
   if (key.includes("vie pratique")) {
-    return base + " bg-amber-600/90 text-white";
+    return base + " bg-[#EA580C] text-white";
   }
   if (key.includes("société")) {
-    return base + " bg-rose-600/90 text-white";
+    return base + " bg-[#DB2777] text-white";
   }
   if (key.includes("produits") || key.includes("services")) {
-    return base + " bg-sky-600/90 text-white";
+    return base + " bg-[#0EA5E9] text-white";
   }
   if (key.includes("vie de la mutuelle")) {
-    return base + " bg-violet-600/90 text-white";
+    return base + " bg-[#4F46E5] text-white";
   }
-  return base + " bg-slate-700/90 text-white";
+  return base + " bg-[#4B5563] text-white";
 }
 
 function escapeHtml(value: string): string {
@@ -184,7 +191,8 @@ function buildFormattedTextFromDetail(article: ArticleDetail): string {
   const lines: string[] = [];
 
   if (article.titre) {
-    lines.push(`# ${article.titre}`);
+    // Titre simple sans syntaxe Markdown pour un meilleur collage dans Word / Google Docs
+    lines.push(article.titre);
     lines.push("");
   }
 
@@ -219,6 +227,7 @@ type ArticleDetailContentProps = {
   loading: boolean;
   error: string | null;
   detail: ArticleDetail | null;
+  showEtat: boolean;
 };
 
 function ArticleDetailContent({
@@ -227,6 +236,7 @@ function ArticleDetailContent({
   loading,
   error,
   detail,
+  showEtat,
 }: ArticleDetailContentProps) {
   const [copyState, setCopyState] = useState<
     "idle" | "html" | "text" | "error"
@@ -277,10 +287,18 @@ function ArticleDetailContent({
 
   return (
     <>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-rer-border pb-3">
         <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-            Prévisualisation
+          <p className="text-xs font-medium uppercase tracking-wide text-rer-muted">
+            {selectedArticle &&
+            (selectedArticle.rubrique || selectedArticle.format)
+              ? [
+                  selectedArticle.rubrique?.libelle,
+                  selectedArticle.format?.libelle,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")
+              : "Prévisualisation"}
           </p>
           {selectedArticle && (
             <h2 className="mt-1 text-lg font-semibold text-slate-900">
@@ -295,8 +313,8 @@ function ArticleDetailContent({
             onClick={handleCopyHtml}
             className={`inline-flex items-center rounded-md px-3 py-1.5 text-xs font-medium shadow-sm ${
               canCopy
-                ? "bg-slate-900 text-white hover:bg-slate-800"
-                : "bg-slate-200 text-slate-500"
+                ? "bg-rer-orange text-white hover:bg-[#e25730]"
+                : "bg-rer-app text-rer-muted"
             }`}
           >
             {copyState === "html"
@@ -311,8 +329,8 @@ function ArticleDetailContent({
             onClick={handleCopyText}
             className={`inline-flex items-center rounded-md border px-3 py-1.5 text-xs font-medium ${
               canCopy
-                ? "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
-                : "border-slate-200 bg-slate-100 text-slate-400"
+                ? "border-rer-border bg-white text-rer-text hover:bg-rer-app/60"
+                : "border-rer-border bg-rer-app text-rer-muted"
             }`}
           >
             {copyState === "text"
@@ -323,13 +341,13 @@ function ArticleDetailContent({
           </button>
           <a
             href={`/api/articles/${selectedId}/export?format=word`}
-            className="inline-flex items-center rounded-md border border-slate-200 bg-white px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-50"
+            className="inline-flex items-center rounded-md border border-rer-border bg-white px-2 py-1 text-[11px] font-medium text-rer-text hover:bg-rer-app/60"
           >
             Exporter Word
           </a>
           <Link
             href={`/articles/${selectedId}`}
-            className="inline-flex items-center rounded-md border border-slate-200 bg-white px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-50"
+            className="inline-flex items-center rounded-md border border-rer-border bg-white px-2 py-1 text-[11px] font-medium text-rer-text hover:bg-rer-app/60"
           >
             Ouvrir en pleine page
           </Link>
@@ -349,28 +367,33 @@ function ArticleDetailContent({
       )}
 
       {!loading && !error && detail && (
-        <div className="flex-1 space-y-4 overflow-y-auto pr-1 text-sm text-slate-800">
-          {detail.etat && (
-            <p className="text-xs text-slate-500">
+        <div className="flex-1 space-y-4 overflow-y-auto pr-1 text-sm text-rer-text">
+          {showEtat && detail.etat && (
+            <p className="text-xs text-rer-muted">
               État :{" "}
               <span className="font-medium">{detail.etat.libelle}</span>
             </p>
           )}
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-rer-muted">
             {detail.auteur &&
-              `Auteur : ${detail.auteur.prenom} ${detail.auteur.nom}`}
+              `${detail.auteur.prenom} ${detail.auteur.nom}`}
             {detail.mutuelle && ` · ${detail.mutuelle.nom}`}
-            {detail.rubrique && ` · ${detail.rubrique.libelle}`}
-            {detail.format && ` · ${detail.format.libelle}`}
-            {detail.dateDepot &&
-              ` · Déposé le ${new Date(
-                detail.dateDepot
-              ).toLocaleDateString("fr-FR")}`}
+            {(() => {
+              const d =
+                detail.datePublication ??
+                detail.dateDepot ??
+                detail.createdAt ??
+                null;
+              if (!d) return null;
+              return ` · Publié le ${new Date(d).toLocaleDateString(
+                "fr-FR"
+              )}`;
+            })()}
           </p>
 
           {detail.lienPhoto && (
             <div className="space-y-2">
-              <div className="overflow-hidden rounded-md border border-slate-200 bg-slate-50">
+              <div className="overflow-hidden rounded-md border border-rer-border bg-rer-app">
                 <img
                   src={detail.lienPhoto}
                   alt={detail.legendePhoto || detail.titre}
@@ -381,14 +404,14 @@ function ArticleDetailContent({
                 <a
                   href={detail.lienPhoto}
                   download
-                  className="inline-flex items-center rounded-md border border-slate-200 bg-white px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-50"
+                  className="inline-flex items-center rounded-md border border-rer-border bg-white px-2 py-1 text-[11px] font-medium text-rer-text hover:bg-rer-app/60"
                 >
                   Télécharger l’image
                 </a>
                 <button
                   type="button"
                   onClick={handleCopyImageUrl}
-                  className="inline-flex items-center rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-100"
+                  className="inline-flex items-center rounded-md border border-rer-border bg-rer-app px-2 py-1 text-[11px] font-medium text-rer-text hover:bg-rer-app/80"
                 >
                   {imageCopyState === "copied"
                     ? "URL copiée"
@@ -398,7 +421,7 @@ function ArticleDetailContent({
                 </button>
               </div>
               {detail.legendePhoto && (
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-rer-muted">
                   {detail.legendePhoto}
                 </p>
               )}
@@ -406,23 +429,23 @@ function ArticleDetailContent({
           )}
 
           {detail.chapo && (
-            <p className="whitespace-pre-wrap text-sm font-semibold text-slate-900">
+          <p className="whitespace-pre-wrap text-sm font-semibold text-rer-text">
               {detail.chapo}
             </p>
           )}
 
           {detail.contenu && (
-            <div className="prose max-w-none text-sm text-slate-800">
+            <div className="prose max-w-none text-sm text-rer-text">
               <p className="whitespace-pre-wrap">{detail.contenu}</p>
             </div>
           )}
 
           {detail.postRs && (
-            <div className="rounded-md bg-slate-50 p-3">
+            <div className="rounded-md bg-rer-app p-3">
               <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
                 Post réseaux sociaux
               </p>
-              <p className="whitespace-pre-wrap text-sm text-slate-800">
+              <p className="whitespace-pre-wrap text-sm text-rer-text">
                 {detail.postRs}
               </p>
             </div>
@@ -447,6 +470,7 @@ export function ArticlesExplorerView({
   since = "",
   from = "",
   to = "",
+  showEtat,
 }: ArticlesExplorerViewProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -635,7 +659,7 @@ export function ArticlesExplorerView({
 
   if (!visibleArticles.length) {
     return (
-      <p className="rounded-md bg-white px-3 py-6 text-center text-sm text-slate-500 shadow-sm ring-1 ring-slate-200">
+      <p className="rounded-md bg-white px-3 py-6 text-center text-sm text-rer-muted shadow-sm ring-1 ring-rer-border">
         Aucun article ne correspond à ces critères. Essayez d&apos;élargir
         votre recherche ou de modifier les filtres.
       </p>
@@ -645,7 +669,7 @@ export function ArticlesExplorerView({
   return (
     <>
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,2fr)]">
-        <div className="space-y-2 max-h-[calc(100vh-260px)] overflow-y-auto pr-1 border-r border-slate-200">
+        <div className="space-y-2 max-h-[calc(100vh-120px)] overflow-y-auto pr-1 border-r border-rer-border">
           {visibleArticles.map((article) => {
             const isSelected = article.id === selectedId;
             return (
@@ -656,12 +680,12 @@ export function ArticlesExplorerView({
                 aria-pressed={isSelected}
                 className={`group flex w-full cursor-pointer rounded-2xl text-left transition-colors transition-shadow transition-transform duration-150 ease-out ${
                   isSelected
-                    ? "border border-slate-900 bg-slate-900/5 shadow-md"
-                    : "border border-transparent bg-white hover:border-slate-300 hover:bg-slate-50 hover:shadow-sm hover:-translate-y-[1px]"
+                    ? "border border-rer-blue bg-rer-blue/5 shadow-md"
+                    : "border border-transparent bg-white hover:border-rer-border hover:bg-rer-app hover:shadow-sm hover:-translate-y-[1px]"
                 }`}
               >
                 <article className="flex h-full flex-1 items-stretch gap-3 overflow-hidden rounded-2xl">
-                  <div className="relative hidden h-20 w-32 flex-none bg-slate-100 sm:block">
+                  <div className="relative hidden w-32 flex-none bg-rer-app sm:block">
                     {article.lienPhoto ? (
                       <img
                         src={article.lienPhoto}
@@ -670,57 +694,66 @@ export function ArticlesExplorerView({
                         loading="lazy"
                       />
                     ) : (
-                      <div className="flex h-full w-full items-center justify-center text-[10px] text-slate-400">
+                      <div className="flex h-full w-full items-center justify-center text-[10px] text-rer-muted">
                         Pas de photo
                       </div>
                     )}
                   </div>
-                  <div className="flex flex-1 flex-col gap-1 p-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex flex-wrap items-center gap-1 text-[11px]">
-                        {article.etat && (
-                          <span
-                            className={getEtatBadgeClasses(
-                              article.etat.slug,
-                              isSelected
-                            )}
-                          >
-                            {article.etat.libelle}
-                          </span>
-                        )}
-                        {article.format && (
-                          <span
-                            className={getFormatBadgeClasses(
-                              article.format.libelle
-                            )}
-                          >
-                            {article.format.libelle}
-                          </span>
-                        )}
-                      </div>
+                    <div className="flex flex-1 flex-col gap-1 p-3">
+                    <div className="flex flex-wrap items-center justify-end gap-1 text-[11px]">
+                      {article.format && (
+                        <span
+                          className={getFormatBadgeClasses(
+                            article.format.libelle
+                          )}
+                        >
+                          {article.format.libelle}
+                        </span>
+                      )}
                       {article.rubrique && (
                         <span
-                          className={`${getRubriqueBadgeClasses(
+                          className={getRubriqueBadgeClasses(
                             article.rubrique.libelle
-                          )} text-[11px]`}
+                          )}
                         >
                           {article.rubrique.libelle}
                         </span>
                       )}
+                      {showEtat && article.etat && (
+                        <span
+                          className={getEtatBadgeClasses(
+                            article.etat.slug,
+                            isSelected
+                          )}
+                        >
+                          {article.etat.libelle}
+                        </span>
+                      )}
                     </div>
-                    <p className="text-sm font-semibold text-slate-900">
+                    <p className="text-sm font-semibold text-rer-text">
                       {article.titre}
                     </p>
                     {article.chapo && (
-                      <p className="line-clamp-2 text-xs text-slate-600">
+                      <p className="line-clamp-2 text-xs text-rer-muted">
                         {article.chapo}
                       </p>
                     )}
-                    <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-slate-500">
+                    <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-rer-muted">
                       <p className="truncate">
                         {article.auteur &&
                           `${article.auteur.prenom} ${article.auteur.nom}`}
                         {article.mutuelle && ` · ${article.mutuelle.nom}`}
+                      </p>
+                      <p className="whitespace-nowrap">
+                        {(() => {
+                          const d =
+                            article.datePublication ??
+                            article.dateDepot ??
+                            article.createdAt;
+                          return d
+                            ? new Date(d).toLocaleDateString("fr-FR")
+                            : null;
+                        })()}
                       </p>
                     </div>
                   </div>
@@ -731,9 +764,9 @@ export function ArticlesExplorerView({
           <div ref={sentinelRef} className="h-6 lg:h-8" />
         </div>
 
-        <div className="hidden min-h-[260px] flex-col rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-200 lg:flex">
+        <div className="hidden min-h-[260px] flex-col rounded-xl bg-white p-4 shadow-sm ring-1 ring-rer-border lg:flex">
           {!selectedId && (
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-rer-muted">
               Sélectionnez un article dans la liste pour voir son contenu.
             </p>
           )}
@@ -745,6 +778,7 @@ export function ArticlesExplorerView({
               loading={loading}
               error={error}
               detail={detail}
+              showEtat={showEtat}
             />
           )}
         </div>
@@ -759,14 +793,14 @@ export function ArticlesExplorerView({
             className="absolute inset-x-0 bottom-0 top-16 rounded-t-2xl bg-white shadow-xl"
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
-              <span className="text-sm font-medium text-slate-900">
+            <div className="flex items-center justify-between border-b border-rer-border px-4 py-3">
+              <span className="text-sm font-medium text-rer-text">
                 Prévisualisation
               </span>
               <button
                 type="button"
                 onClick={() => setIsDrawerOpen(false)}
-                className="rounded-full border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600 hover:bg-slate-50"
+                className="rounded-full border border-rer-border bg-white px-2 py-1 text-xs text-rer-muted hover:bg-rer-app/60"
               >
                 Fermer
               </button>
@@ -778,6 +812,7 @@ export function ArticlesExplorerView({
                 loading={loading}
                 error={error}
                 detail={detail}
+                showEtat={showEtat}
               />
             </div>
           </div>

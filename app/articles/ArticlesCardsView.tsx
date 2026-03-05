@@ -11,6 +11,9 @@ type ArticleSummary = {
   legendePhoto: string | null;
   auteur: { prenom: string; nom: string } | null;
   mutuelle: { nom: string } | null;
+  dateDepot: string | null;
+  datePublication: string | null;
+  createdAt: string;
 };
 
 type ArticlesCardsViewProps = {
@@ -130,7 +133,7 @@ export function ArticlesCardsView({
   if (!articles.length) {
     return (
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        <p className="col-span-full rounded-md bg-white px-3 py-6 text-center text-sm text-slate-500 shadow-sm ring-1 ring-slate-200">
+        <p className="col-span-full rounded-md bg-white px-3 py-6 text-center text-sm text-rer-muted shadow-sm ring-1 ring-rer-border">
           Aucun article ne correspond à ces critères. Essayez d&apos;élargir
           votre recherche ou de modifier les filtres.
         </p>
@@ -144,9 +147,9 @@ export function ArticlesCardsView({
         {articles.map((article) => (
           <article
             key={article.id}
-            className="flex h-full flex-col overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-200"
+            className="flex h-full flex-col overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-rer-border sm:flex-row"
           >
-            <div className="relative h-40 w-full bg-slate-100">
+            <div className="relative h-40 w-full bg-rer-app sm:h-auto sm:w-40 sm:flex-none">
               {article.lienPhoto ? (
                 <img
                   src={article.lienPhoto}
@@ -155,7 +158,7 @@ export function ArticlesCardsView({
                   loading="lazy"
                 />
               ) : (
-                <div className="flex h-full w-full items-center justify-center text-xs text-slate-400">
+                <div className="flex h-full w-full items-center justify-center text-xs text-rer-muted">
                   Pas de photo
                 </div>
               )}
@@ -163,19 +166,30 @@ export function ArticlesCardsView({
             <div className="flex flex-1 flex-col gap-2 p-4">
               <Link
                 href={`/articles/${article.id}`}
-                className="text-base font-semibold text-slate-900 hover:underline sm:text-lg"
+                className="text-base font-semibold text-rer-text hover:underline sm:text-lg"
               >
                 {article.titre}
               </Link>
               {article.chapo && (
-                <p className="line-clamp-2 text-sm text-slate-600">
+                <p className="line-clamp-2 text-sm text-rer-muted">
                   {article.chapo}
                 </p>
               )}
-              <p className="mt-auto text-xs text-slate-500">
+              <p className="mt-auto text-xs text-rer-muted">
                 {article.auteur &&
                   `${article.auteur.prenom} ${article.auteur.nom}`}
                 {article.mutuelle && ` · ${article.mutuelle.nom}`}
+                {(() => {
+                  const d =
+                    article.datePublication ??
+                    article.dateDepot ??
+                    article.createdAt;
+                  return d
+                    ? ` · Publié le ${new Date(
+                        d
+                      ).toLocaleDateString("fr-FR")}`
+                    : "";
+                })()}
               </p>
             </div>
           </article>

@@ -106,6 +106,13 @@ export function ArticlesFiltersBar({
   const [showSuggestions, setShowSuggestions] = useState(false);
   const searchWrapperRef = useRef<HTMLDivElement>(null);
 
+  const currentView =
+    searchParams.get("view") === "cards" ||
+    searchParams.get("view") === "table" ||
+    searchParams.get("view") === "explorer"
+      ? (searchParams.get("view") as "cards" | "table" | "explorer")
+      : "explorer";
+
   const isFacetLabel = (s: string) =>
     /^(Mutuelle|Rubrique|Format)\s*:\s*\S+$/.test((s ?? "").trim());
 
@@ -384,13 +391,16 @@ export function ArticlesFiltersBar({
   };
 
   return (
-    <section aria-labelledby="filtres" className="mb-6 space-y-2">
+    <section
+      aria-labelledby="filtres"
+      className="mb-4 space-y-2 rounded-xl bg-white p-3 shadow-sm ring-1 ring-rer-border lg:mb-6"
+    >
       <div className="flex flex-wrap items-center gap-3">
         <div ref={searchWrapperRef} className="relative flex-1 min-w-[220px] max-w-full">
           <div className="flex-1 min-w-[200px]">
             <label
               htmlFor="q"
-              className="block text-xs font-medium uppercase tracking-wide text-slate-600"
+              className="sr-only lg:block text-xs font-medium uppercase tracking-wide text-rer-muted"
             >
               Recherche texte
             </label>
@@ -402,7 +412,7 @@ export function ArticlesFiltersBar({
               onChange={(event) => setInputValue(event.target.value)}
               onFocus={() => inputValue.trim().length >= 2 && setShowSuggestions(true)}
               placeholder="Titre, chapô, contenu, ou nom de mutuelle / rubrique / format..."
-              className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 shadow-sm focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900"
+              className="mt-1 w-full rounded-md border border-rer-border bg-white px-3 py-1.5 text-sm text-rer-text shadow-sm focus:border-rer-blue focus:outline-none focus:ring-1 focus:ring-rer-blue"
               autoComplete="off"
               aria-expanded={hasSuggestions}
               aria-controls="search-suggestions"
@@ -414,10 +424,10 @@ export function ArticlesFiltersBar({
             <div
               id="search-suggestions"
               role="listbox"
-              className="absolute top-full left-0 right-0 z-50 mt-1 max-h-72 overflow-y-auto rounded-md border border-slate-200 bg-white py-1 shadow-lg"
+              className="absolute top-full left-0 right-0 z-50 mt-1 max-h-72 overflow-y-auto rounded-md border border-rer-border bg-white py-1 shadow-lg"
             >
               {loadingSuggestions ? (
-                <p className="px-3 py-2 text-xs text-slate-500">Recherche des suggestions…</p>
+                <p className="px-3 py-2 text-xs text-rer-muted">Recherche des suggestions…</p>
               ) : suggestions ? (
                 <>
                   {suggestions.mutuelles.map((m) => (
@@ -426,9 +436,9 @@ export function ArticlesFiltersBar({
                       type="button"
                       role="option"
                       onClick={() => applyFacetSuggestion("mutuelle", m.id, `Mutuelle : ${m.nom}`)}
-                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-800 hover:bg-slate-100"
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-rer-text hover:bg-rer-app"
                     >
-                      <span className="text-[10px] font-semibold uppercase text-slate-400">
+                      <span className="text-[10px] font-semibold uppercase text-rer-muted">
                         Mutuelle
                       </span>
                       <span>{m.nom}</span>
@@ -440,9 +450,9 @@ export function ArticlesFiltersBar({
                       type="button"
                       role="option"
                       onClick={() => applyFacetSuggestion("rubrique", r.id, `Rubrique : ${r.libelle}`)}
-                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-800 hover:bg-slate-100"
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-rer-text hover:bg-rer-app"
                     >
-                      <span className="text-[10px] font-semibold uppercase text-slate-400">
+                      <span className="text-[10px] font-semibold uppercase text-rer-muted">
                         Rubrique
                       </span>
                       <span>{r.libelle}</span>
@@ -454,9 +464,9 @@ export function ArticlesFiltersBar({
                       type="button"
                       role="option"
                       onClick={() => applyFacetSuggestion("format", f.id, `Format : ${f.libelle}`)}
-                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-800 hover:bg-slate-100"
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-rer-text hover:bg-rer-app"
                     >
-                      <span className="text-[10px] font-semibold uppercase text-slate-400">
+                      <span className="text-[10px] font-semibold uppercase text-rer-muted">
                         Format
                       </span>
                       <span>{f.libelle}</span>
@@ -465,12 +475,12 @@ export function ArticlesFiltersBar({
                   {(suggestions.mutuelles.length > 0 ||
                     suggestions.rubriques.length > 0 ||
                     suggestions.formats.length > 0) && (
-                    <div className="border-t border-slate-100 px-2 pt-1">
+                    <div className="border-t border-rer-border px-2 pt-1">
                       <button
                         type="button"
                         role="option"
                         onClick={applyTextSearch}
-                        className="flex w-full items-center gap-2 rounded px-2 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-100"
+                        className="flex w-full items-center gap-2 rounded px-2 py-2 text-left text-sm font-medium text-rer-text hover:bg-rer-app"
                       >
                         Rechercher « {inputValue.trim()} » dans le texte (titre, chapô, contenu)
                       </button>
@@ -483,7 +493,7 @@ export function ArticlesFiltersBar({
                         type="button"
                         role="option"
                         onClick={applyTextSearch}
-                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-100"
+                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-medium text-rer-text hover:bg-rer-app"
                       >
                         Rechercher « {inputValue.trim()} » dans le texte
                       </button>
@@ -493,10 +503,61 @@ export function ArticlesFiltersBar({
             </div>
           )}
         </div>
+
+        <div className="hidden items-center gap-1 rounded-full border border-rer-border bg-rer-app p-1 text-xs font-medium text-rer-muted lg:flex">
+          <Link
+            href={{
+              pathname,
+              query: {
+                ...Object.fromEntries(searchParams.entries()),
+                view: "explorer",
+              },
+            }}
+            className={`rounded-full px-3 py-1 ${
+              currentView === "explorer"
+                ? "bg-white text-rer-blue shadow-sm"
+                : "text-rer-muted hover:bg-white/60"
+            }`}
+          >
+            Explorer
+          </Link>
+          <Link
+            href={{
+              pathname,
+              query: {
+                ...Object.fromEntries(searchParams.entries()),
+                view: "cards",
+              },
+            }}
+            className={`rounded-full px-3 py-1 ${
+              currentView === "cards"
+                ? "bg-white text-rer-blue shadow-sm"
+                : "text-rer-muted hover:bg-white/60"
+            }`}
+          >
+            Cartes
+          </Link>
+          <Link
+            href={{
+              pathname,
+              query: {
+                ...Object.fromEntries(searchParams.entries()),
+                view: "table",
+              },
+            }}
+            className={`rounded-full px-3 py-1 ${
+              currentView === "table"
+                ? "bg-white text-rer-blue shadow-sm"
+                : "text-rer-muted hover:bg-white/60"
+            }`}
+          >
+            Tableau
+          </Link>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-rer-muted">
           {derivedTotal} article{derivedTotal > 1 ? "s" : ""} trouvé
           {derivedTotal > 1 ? "s" : ""}.
           {debouncedQ && (
@@ -508,7 +569,7 @@ export function ArticlesFiltersBar({
           {lastCreatedAtLabel && (
             <>
               {" "}
-              <span className="text-[11px] text-slate-400">
+              <span className="text-[11px] text-rer-subtle">
                 · Dernier article publié le {lastCreatedAtLabel}
               </span>
             </>
@@ -519,7 +580,7 @@ export function ArticlesFiltersBar({
             <button
               type="button"
               onClick={handleReset}
-              className="text-xs font-medium text-slate-500 underline-offset-2 hover:text-slate-800 hover:underline"
+              className="text-xs font-medium text-rer-muted underline-offset-2 hover:text-rer-text hover:underline"
             >
               Réinitialiser tous les filtres
             </button>
@@ -527,7 +588,7 @@ export function ArticlesFiltersBar({
           <button
             type="button"
             onClick={() => setIsCollapsed((prev) => !prev)}
-            className="text-xs font-medium text-slate-500 underline-offset-2 hover:text-slate-800 hover:underline"
+            className="text-xs font-medium text-rer-muted underline-offset-2 hover:text-rer-text hover:underline"
           >
             {isCollapsed ? "Afficher les filtres" : "Masquer les filtres"}
           </button>
@@ -543,7 +604,7 @@ export function ArticlesFiltersBar({
               key={`active-mutuelle-${m.id}`}
               type="button"
               onClick={() => handleFacetToggle("mutuelle", m.id)}
-              className="inline-flex items-center gap-1 rounded-full bg-slate-900 px-2 py-0.5 text-xs font-medium text-white"
+              className="inline-flex items-center gap-1 rounded-full bg-rer-blue px-2 py-0.5 text-xs font-medium text-white"
             >
               <span>{m.nom}</span>
               <span className="ml-0.5 text-[10px] opacity-80">· {m.count}</span>
@@ -576,7 +637,7 @@ export function ArticlesFiltersBar({
       )}
 
       {!isCollapsed && facets && (
-        <div className="space-y-1 rounded-md border border-slate-200 bg-white/80 p-2 text-xs">
+        <div className="space-y-1 rounded-md border border-rer-border bg-rer-app/60 p-2 text-xs">
           <div className="flex flex-wrap items-center gap-1">
             <span className="font-semibold text-slate-700">Mutuelles</span>
             {facets.mutuelles.length === 0 && (
@@ -653,14 +714,14 @@ export function ArticlesFiltersBar({
           </div>
 
           <div className="mt-1 flex flex-wrap items-center gap-1">
-            <span className="font-semibold text-slate-700">Dates</span>
+            <span className="font-semibold text-rer-text">Dates</span>
             <button
               type="button"
               onClick={() => handleDatePresetClick("1m")}
               className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs transition ${
                 datePreset === "1m"
-                  ? "bg-slate-900 text-white"
-                  : "bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100"
+                  ? "bg-rer-blue text-white"
+                  : "bg-white text-rer-text ring-1 ring-rer-border hover:bg-rer-app"
               }`}
             >
               Depuis 1 mois
@@ -670,8 +731,8 @@ export function ArticlesFiltersBar({
               onClick={() => handleDatePresetClick("3m")}
               className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs transition ${
                 datePreset === "3m"
-                  ? "bg-slate-900 text-white"
-                  : "bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100"
+                  ? "bg-rer-blue text-white"
+                  : "bg-white text-rer-text ring-1 ring-rer-border hover:bg-rer-app"
               }`}
             >
               Depuis 3 mois
@@ -681,32 +742,32 @@ export function ArticlesFiltersBar({
               onClick={() => handleDatePresetClick("6m")}
               className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs transition ${
                 datePreset === "6m"
-                  ? "bg-slate-900 text-white"
-                  : "bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100"
+                  ? "bg-rer-blue text-white"
+                  : "bg-white text-rer-text ring-1 ring-rer-border hover:bg-rer-app"
               }`}
             >
               Depuis 6 mois
             </button>
-            <div className="ml-2 flex flex-wrap items-center gap-1 text-[11px] text-slate-600">
+            <div className="ml-2 flex flex-wrap items-center gap-1 text-[11px] text-rer-muted">
               <span>Période personnalisée :</span>
               <input
                 type="date"
                 value={customFrom}
                 onChange={(e) => handleCustomDateChange("from", e.target.value)}
-                className="h-6 rounded border border-slate-200 bg-white px-1 text-[11px]"
+                className="h-6 rounded border border-rer-border bg-white px-1 text-[11px]"
               />
               <span>au</span>
               <input
                 type="date"
                 value={customTo}
                 onChange={(e) => handleCustomDateChange("to", e.target.value)}
-                className="h-6 rounded border border-slate-200 bg-white px-1 text-[11px]"
+                className="h-6 rounded border border-rer-border bg-white px-1 text-[11px]"
               />
             </div>
           </div>
 
           {loadingFacets && (
-            <p className="text-[10px] text-slate-400">Mise à jour des facettes…</p>
+            <p className="text-[10px] text-rer-subtle">Mise à jour des facettes…</p>
           )}
         </div>
       )}
