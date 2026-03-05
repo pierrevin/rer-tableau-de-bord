@@ -305,7 +305,10 @@ export default function AdminReferentielsPage() {
   };
 
   const createAuteur = async () => {
-    if (!newAuteurPrenom.trim() || !newAuteurNom.trim()) return;
+    if (!newAuteurPrenom.trim() || !newAuteurNom.trim() || !newAuteurMutuelleId) {
+      setError("Prénom, nom et mutuelle sont obligatoires pour créer un auteur.");
+      return;
+    }
     setSavingKey("auteur-new");
     setError(null);
     try {
@@ -316,7 +319,7 @@ export default function AdminReferentielsPage() {
           prenom: newAuteurPrenom.trim(),
           nom: newAuteurNom.trim(),
           email: newAuteurEmail.trim() || null,
-          mutuelleId: newAuteurMutuelleId || null,
+          mutuelleId: newAuteurMutuelleId,
         }),
       });
       if (!res.ok) {

@@ -13,6 +13,7 @@ type Auteur = {
   id: string;
   prenom: string;
   nom: string;
+  email: string | null;
   mutuelleId: string | null;
 };
 
@@ -37,7 +38,9 @@ export default function AdminUsersPage() {
 
   const [newEmail, setNewEmail] = useState("");
   const [newRole, setNewRole] = useState("auteur");
-  const [newAuteurId, setNewAuteurId] = useState<string | "">("");
+  const [newPrenom, setNewPrenom] = useState("");
+  const [newNom, setNewNom] = useState("");
+  const [newMutuelleId, setNewMutuelleId] = useState<string | "">("");
 
   useEffect(() => {
     const run = async () => {
@@ -70,7 +73,10 @@ export default function AdminUsersPage() {
   };
 
   const handleCreate = async () => {
-    if (!newEmail.trim()) return;
+    if (!newEmail.trim() || !newPrenom.trim() || !newNom.trim() || !newMutuelleId) {
+      setError("Prénom, nom, email et mutuelle sont obligatoires pour créer un utilisateur.");
+      return;
+    }
     setSavingId("new");
     setError(null);
     try {
@@ -80,7 +86,9 @@ export default function AdminUsersPage() {
         body: JSON.stringify({
           email: newEmail.trim(),
           role: newRole,
-          auteurId: newAuteurId || null,
+          prenom: newPrenom.trim(),
+          nom: newNom.trim(),
+          mutuelleId: newMutuelleId || null,
         }),
       });
       if (!res.ok) {
@@ -89,7 +97,9 @@ export default function AdminUsersPage() {
       }
       setNewEmail("");
       setNewRole("auteur");
-      setNewAuteurId("");
+      setNewPrenom("");
+      setNewNom("");
+      setNewMutuelleId("");
       await refresh();
     } catch (e: any) {
       setError(e.message || "Erreur lors de la création");
@@ -147,6 +157,30 @@ export default function AdminUsersPage() {
     return m ? `${a.prenom} ${a.nom} (${m.nom})` : `${a.prenom} ${a.nom}`;
   };
 
+  const updateAuteur = async (
+    auteurId: string,
+    patch: Partial<{ prenom: string; nom: string; mutuelleId: string | null }>
+  ) => {
+    setSavingId(`auteur-${auteurId}`);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/auteurs/${auteurId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch),
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json.error || "Erreur lors de la mise à jour de la personne");
+      }
+      await refresh();
+    } catch (e: any) {
+      setError(e.message || "Erreur lors de la mise à jour de la personne");
+    } finally {
+      setSavingId(null);
+    }
+  };
+
   if (loading) {
     return (
       <section className="space-y-3 rounded-xl bg-white p-5 shadow-sm ring-1 ring-rer-border">
@@ -178,8 +212,8 @@ export default function AdminUsersPage() {
           Utilisateurs & rôles
         </h1>
         <p className="text-sm text-rer-muted">
-          Créer, modifier et supprimer les comptes, définir les rôles et
-          rattacher les auteurs pour les fonctionnalités Mes articles.
+          Créer, modifier et supprimer les comptes, définir les rôles et gérer
+          directement les personnes (prénom, nom, mutuelle) associées.
         </p>
       </header>
 
@@ -194,6 +228,20 @@ export default function AdminUsersPage() {
           Nouvel utilisateur
         </h2>
         <div className="flex flex-wrap items-center gap-2">
+          <input
+            type="text"
+            placeholder="Prénom"
+            value={newPrenom}
+            onChange={(e) => setNewPrenom(e.target.value)}
+            className="h-8 w-24 rounded border border-rer-border bg-white px-2 text-sm"
+          />
+          <input
+            type="text"
+            placeholder="Nom"
+            value={newNom}
+            onChange={(e) => setNewNom(e.target.value)}
+            className="h-8 w-28 rounded border border-rer-border bg-white px-2 text-sm"
+          />
           <input
             type="email"
             placeholder="email@exemple.org"
@@ -213,14 +261,14 @@ export default function AdminUsersPage() {
             ))}
           </select>
           <select
-            value={newAuteurId}
-            onChange={(e) => setNewAuteurId(e.target.value)}
-            className="h-8 min-w-[220px] rounded border border-rer-border bg-white px-2 text-sm"
+            value={newMutuelleId}
+            onChange={(e) => setNewMutuelleId(e.target.value)}
+            className="h-8 min-w-[180px] rounded border border-rer-border bg-white px-2 text-sm"
           >
-            <option value="">Auteur (optionnel)…</option>
-            {data.auteurs.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.prenom} {a.nom}
+            <option value="">Mutuelle…</option>
+            {data.mutuelles.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.nom}
               </option>
             ))}
           </select>
@@ -239,15 +287,76 @@ export default function AdminUsersPage() {
         <table className="min-w-full divide-y divide-rer-border text-sm">
           <thead className="bg-rer-app text-xs font-semibold uppercase tracking-wide text-rer-muted">
             <tr>
+              <th className="px-2 py-2 text-left">Personne</th>
+              <th className="px-2 py-2 text-left">Mutuelle</th>
               <th className="px-2 py-2 text-left">Email</th>
               <th className="px-2 py-2 text-left">Rôle</th>
-              <th className="px-2 py-2 text-left">Auteur rattaché</th>
               <th className="px-2 py-2 text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-rer-border bg-white">
             {data.users.map((u) => (
               <tr key={u.id} className="hover:bg-rer-app/60">
+                <td className="px-2 py-1.5 align-top">
+                  {u.auteurId && data.auteurs.find((a) => a.id === u.auteurId) ? (
+                    (() => {
+                      const a = data.auteurs.find((x) => x.id === u.auteurId)!;
+                      return (
+                        <div className="flex flex-wrap items-center gap-1">
+                          <input
+                            type="text"
+                            defaultValue={a.prenom}
+                            onBlur={(e) =>
+                              e.target.value !== a.prenom &&
+                              updateAuteur(a.id, { prenom: e.target.value })
+                            }
+                            className="h-7 w-24 rounded border border-transparent px-1 py-0.5 text-xs hover:border-rer-border focus:border-rer-blue focus:outline-none"
+                          />
+                          <input
+                            type="text"
+                            defaultValue={a.nom}
+                            onBlur={(e) =>
+                              e.target.value !== a.nom &&
+                              updateAuteur(a.id, { nom: e.target.value })
+                            }
+                            className="h-7 w-28 rounded border border-transparent px-1 py-0.5 text-xs hover:border-rer-border focus:border-rer-blue focus:outline-none"
+                          />
+                        </div>
+                      );
+                    })()
+                  ) : (
+                    <p className="text-xs text-rer-subtle">
+                      Aucun auteur associé (utiliser l’import ou créer un compte).
+                    </p>
+                  )}
+                </td>
+                <td className="px-2 py-1.5 align-top">
+                  {u.auteurId && data.auteurs.find((a) => a.id === u.auteurId) ? (
+                    (() => {
+                      const a = data.auteurs.find((x) => x.id === u.auteurId)!;
+                      return (
+                        <select
+                          defaultValue={a.mutuelleId || ""}
+                          onChange={(e) =>
+                            updateAuteur(a.id, {
+                              mutuelleId: e.target.value || null,
+                            })
+                          }
+                          className="h-8 rounded border border-rer-border bg-white px-2 text-xs"
+                        >
+                          <option value="">Mutuelle…</option>
+                          {data.mutuelles.map((m) => (
+                            <option key={m.id} value={m.id}>
+                              {m.nom}
+                            </option>
+                          ))}
+                        </select>
+                      );
+                    })()
+                  ) : (
+                    <span className="text-xs text-rer-subtle">—</span>
+                  )}
+                </td>
                 <td className="px-2 py-1.5 align-top">
                   <input
                     type="email"
@@ -275,26 +384,55 @@ export default function AdminUsersPage() {
                     ))}
                   </select>
                 </td>
-                <td className="px-2 py-1.5 align-top">
-                  <select
-                    defaultValue={u.auteurId || ""}
-                    onChange={(e) =>
-                      handleUpdate(u, { auteurId: e.target.value || null })
-                    }
-                    className="h-8 w-full rounded border border-rer-border bg-white px-2 text-xs"
+                <td className="px-2 py-1.5 text-right align-top space-x-2">
+                  <button
+                    type="button"
+                    disabled={savingId === `reset-${u.id}`}
+                    onClick={async () => {
+                      if (
+                        !window.confirm(
+                          `Réinitialiser le mot de passe de ${u.email} ?`
+                        )
+                      ) {
+                        return;
+                      }
+                      const newPassword = Math.random()
+                        .toString(36)
+                        .slice(-10);
+                      setSavingId(`reset-${u.id}`);
+                      setError(null);
+                      try {
+                        const res = await fetch(
+                          `/api/admin/users/${u.id}/reset-password`,
+                          {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ password: newPassword }),
+                          }
+                        );
+                        if (!res.ok) {
+                          const json = await res.json().catch(() => ({}));
+                          throw new Error(
+                            json.error ||
+                              "Erreur lors de la réinitialisation du mot de passe"
+                          );
+                        }
+                        window.alert(
+                          `Nouveau mot de passe pour ${u.email} : ${newPassword}`
+                        );
+                      } catch (e: any) {
+                        setError(
+                          e.message ||
+                            "Erreur lors de la réinitialisation du mot de passe"
+                        );
+                      } finally {
+                        setSavingId(null);
+                      }
+                    }}
+                    className="text-xs font-medium text-rer-blue hover:text-rer-text disabled:opacity-60"
                   >
-                    <option value="">—</option>
-                    {data.auteurs.map((a) => (
-                      <option key={a.id} value={a.id}>
-                        {a.prenom} {a.nom}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="mt-0.5 text-[11px] text-rer-muted">
-                    {auteurLabel(u.auteurId)}
-                  </p>
-                </td>
-                <td className="px-2 py-1.5 text-right align-top">
+                    Réinitialiser MDP
+                  </button>
                   <button
                     type="button"
                     disabled={savingId === u.id}

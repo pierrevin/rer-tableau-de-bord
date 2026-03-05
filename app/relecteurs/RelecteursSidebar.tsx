@@ -13,22 +13,22 @@ type NavItem = {
 
 const NAV_ITEMS: NavItem[] = [
   {
-    href: "/relecteurs",
-    label: "Vue relecteurs",
+    href: "/admin",
+    label: "Vue admin",
     description: "Aperçu général",
   },
   {
-    href: "/relecteurs/articles",
+    href: "/admin/articles",
     label: "File d’articles",
     description: "Par état et actions rapides",
   },
   {
-    href: "/relecteurs/utilisateurs",
+    href: "/admin/utilisateurs",
     label: "Utilisateurs",
     description: "Rôles et rattachements",
   },
   {
-    href: "/relecteurs/referentiels",
+    href: "/admin/referentiels",
     label: "Référentiels",
     description: "Formats, rubriques, mutuelles, auteurs",
   },

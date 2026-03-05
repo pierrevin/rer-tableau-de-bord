@@ -8,7 +8,8 @@ export function AppMainNav() {
 
   const isOnArticles = pathname.startsWith("/articles");
   const isOnMesArticles = pathname.startsWith("/mes-articles");
-  const isOnRelecteurs = pathname.startsWith("/relecteurs");
+  const isOnAdmin =
+    pathname.startsWith("/admin") || pathname.startsWith("/relecteurs");
 
   const baseClasses =
     "inline-flex items-center rounded-full px-3 py-1 text-sm font-medium transition-colors";
@@ -35,12 +36,12 @@ export function AppMainNav() {
         Mes articles
       </Link>
       <Link
-        href="/relecteurs"
+        href="/admin"
         className={`${baseClasses} ${
-          isOnRelecteurs ? activeClasses : inactiveClasses
+          isOnAdmin ? activeClasses : inactiveClasses
         }`}
       >
-        Relecteurs
+        Admin
       </Link>
     </nav>
   );

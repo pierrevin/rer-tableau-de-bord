@@ -5,7 +5,7 @@ export default function RelecteursPage() {
     <section className="space-y-4 rounded-xl bg-white p-5 shadow-sm ring-1 ring-rer-border">
       <header className="space-y-1">
         <h1 className="text-lg font-semibold text-rer-text">
-          Espace relecteurs / admin
+          Espace d’administration éditoriale
         </h1>
         <p className="text-sm text-rer-muted">
           Cette zone regroupera les outils de relecture, de paramétrage éditorial

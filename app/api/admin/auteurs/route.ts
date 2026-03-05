@@ -27,9 +27,9 @@ export async function POST(request: NextRequest) {
     mutuelleId?: string | null;
   };
 
-  if (!prenom || !nom) {
+  if (!prenom || !nom || !mutuelleId) {
     return NextResponse.json(
-      { error: "Prénom et nom sont obligatoires" },
+      { error: "Prénom, nom et mutuelle sont obligatoires" },
       { status: 400 }
     );
   }
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
       prenom: prenom.trim(),
       nom: nom.trim(),
       email: email?.trim() || null,
-      mutuelleId: mutuelleId || null,
+      mutuelleId,
     },
   });
 
