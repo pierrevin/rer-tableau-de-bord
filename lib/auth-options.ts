@@ -48,8 +48,13 @@ const baseCredentialsProvider = CredentialsProvider({
 
 const providers: NextAuthOptions["providers"] = [baseCredentialsProvider];
 
-// Provider d'impersonation pour la phase de bêta (non activé en production).
-if (process.env.NODE_ENV !== "production") {
+const enableImpersonate =
+  process.env.NEXTAUTH_ENABLE_IMPERSONATE === "1" ||
+  process.env.NEXT_PUBLIC_ENABLE_USER_SWITCH === "1";
+
+// Provider d'impersonation pour la phase de bêta, activable via variable d'env
+// ou via le flag public de switch d'utilisateur.
+if (enableImpersonate) {
   providers.push(
     CredentialsProvider({
       id: "impersonate",
