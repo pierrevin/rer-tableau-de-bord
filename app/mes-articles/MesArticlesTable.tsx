@@ -1,0 +1,219 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
+import { getEtatBadgeClasses } from "../articles/ArticlesCardsExplorer";
+import { ArticleHistoryDrawer } from "./ArticleHistoryDrawer";
+
+type MesArticleRow = {
+  id: string;
+  titre: string;
+  rubrique: string | null;
+  format: string | null;
+  mutuelle: string | null;
+  etatLibelle: string | null;
+  etatSlug: string | null;
+  lastAction: string;
+  lastActionAt: string | null;
+  updatedAt: string;
+  canEdit: boolean;
+};
+
+type MesArticlesTableProps = {
+  articles: MesArticleRow[];
+  total: number;
+  pageSize: number;
+  currentPage: number;
+  totalPages: number;
+};
+
+export function MesArticlesTable({
+  articles,
+  total,
+  pageSize,
+  currentPage,
+  totalPages,
+}: MesArticlesTableProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyArticleId, setHistoryArticleId] = useState<string | null>(null);
+
+  const openHistory = (articleId: string) => {
+    setHistoryArticleId(articleId);
+    setHistoryOpen(true);
+  };
+
+  const closeHistory = () => {
+    setHistoryOpen(false);
+    setHistoryArticleId(null);
+  };
+
+  const goToPage = (page: number) => {
+    const safePage = Math.min(Math.max(page, 1), totalPages);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("page", String(safePage));
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  };
+
+  if (!articles.length) {
+    return (
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-rer-border bg-white shadow-sm ring-1 ring-rer-border">
+          <tbody>
+            <tr>
+              <td className="px-3 py-6 text-center text-sm text-rer-muted">
+                Vous n&apos;avez pas encore d&apos;article. Déposez un premier
+                texte pour le retrouver ici.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-rer-border bg-white shadow-sm ring-1 ring-rer-border">
+          <thead className="bg-rer-blue text-white">
+            <tr>
+              <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-white/90">
+                Titre
+              </th>
+              <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-white/90">
+                Rubrique / Format
+              </th>
+              <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-white/90">
+                Mutuelle
+              </th>
+              <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-white/90">
+                État
+              </th>
+              <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-white/90">
+                Dernière action
+              </th>
+              <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-white/90">
+                Dernière modification
+              </th>
+              <th className="px-3 py-2 text-right text-[11px] font-semibold uppercase tracking-wide text-white/90">
+                Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-rer-border">
+            {articles.map((article) => (
+              <tr key={article.id} className="hover:bg-rer-app">
+                <td className="px-3 py-2 align-top text-sm text-rer-text">
+                  <Link
+                    href={`/articles/${article.id}`}
+                    className="font-semibold text-rer-blue hover:underline"
+                  >
+                    {article.titre}
+                  </Link>
+                </td>
+                <td className="px-3 py-2 align-top text-xs text-rer-muted">
+                  <div className="space-y-0.5">
+                    <div>{article.rubrique ?? "Rubrique non renseignée"}</div>
+                    <div className="text-[11px]">
+                      {article.format ?? "Format non renseigné"}
+                    </div>
+                  </div>
+                </td>
+                <td className="px-3 py-2 align-top text-sm text-rer-muted">
+                  {article.mutuelle ?? "—"}
+                </td>
+                <td className="px-3 py-2 align-top text-sm">
+                  {article.etatLibelle ? (
+                    <span
+                      className={getEtatBadgeClasses(
+                        article.etatSlug ?? undefined
+                      )}
+                    >
+                      {article.etatLibelle}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-rer-muted">État inconnu</span>
+                  )}
+                </td>
+                <td className="px-3 py-2 align-top text-xs text-rer-muted">
+                  <div>{article.lastAction}</div>
+                  {article.lastActionAt && (
+                    <div className="text-[11px]">
+                      {new Date(article.lastActionAt).toLocaleString("fr-FR")}
+                    </div>
+                  )}
+                </td>
+                <td className="px-3 py-2 align-top text-xs text-rer-muted">
+                  {new Date(article.updatedAt).toLocaleString("fr-FR")}
+                </td>
+                <td className="px-3 py-2 align-top text-right text-xs">
+                  <div className="inline-flex flex-col items-end gap-1">
+                    <Link
+                      href={`/articles/${article.id}`}
+                      className="text-xs font-medium text-rer-blue hover:text-rer-text"
+                    >
+                      Voir
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => openHistory(article.id)}
+                      className="text-xs font-medium text-rer-blue hover:text-rer-text"
+                    >
+                      Voir les modifications
+                    </button>
+                    {article.canEdit && (
+                      <Link
+                        href={`/articles/${article.id}/edit`}
+                        className="text-xs font-medium text-rer-blue hover:text-rer-text"
+                      >
+                        Continuer l&apos;édition
+                      </Link>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="mt-3 flex items-center justify-between text-xs text-rer-muted">
+        <div>
+          Page {currentPage} sur {totalPages} ·{" "}
+          {total} article{total > 1 ? "s" : ""} (
+          {pageSize} par page)
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => goToPage(currentPage - 1)}
+            disabled={currentPage <= 1}
+            className="rounded-full border border-rer-border bg-white px-3 py-1 text-xs font-medium text-rer-muted disabled:opacity-50 hover:bg-rer-app disabled:hover:bg-white"
+          >
+            Précédent
+          </button>
+          <button
+            type="button"
+            onClick={() => goToPage(currentPage + 1)}
+            disabled={currentPage >= totalPages}
+            className="rounded-full border border-rer-border bg-white px-3 py-1 text-xs font-medium text-rer-muted disabled:opacity-50 hover:bg-rer-app disabled:hover:bg-white"
+          >
+            Suivant
+          </button>
+        </div>
+      </div>
+
+      <ArticleHistoryDrawer
+        articleId={historyArticleId}
+        open={historyOpen}
+        onClose={closeHistory}
+      />
+    </>
+  );
+}
+

@@ -22,22 +22,46 @@ declare module "next-auth/jwt" {
   }
 }
 
-export const authOptions: NextAuthOptions = {
-  providers: [
+const baseCredentialsProvider = CredentialsProvider({
+  name: "credentials",
+  credentials: {
+    email: { label: "Email", type: "email" },
+    password: { label: "Mot de passe", type: "password" },
+  },
+  async authorize(credentials) {
+    if (!credentials?.email || !credentials?.password) return null;
+    const user = await prisma.user.findUnique({
+      where: { email: credentials.email },
+    });
+    if (!user?.passwordHash) return null;
+    const ok = await bcrypt.compare(credentials.password, user.passwordHash);
+    if (!ok) return null;
+    return {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      auteurId: user.auteurId,
+    };
+  },
+});
+
+const providers: NextAuthOptions["providers"] = [baseCredentialsProvider];
+
+// Provider d'impersonation pour la phase de bêta (non activé en production).
+if (process.env.NODE_ENV !== "production") {
+  providers.push(
     CredentialsProvider({
-      name: "credentials",
+      id: "impersonate",
+      name: "Impersonation (beta)",
       credentials: {
         email: { label: "Email", type: "email" },
-        password: { label: "Mot de passe", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
+        if (!credentials?.email) return null;
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
         });
-        if (!user?.passwordHash) return null;
-        const ok = await bcrypt.compare(credentials.password, user.passwordHash);
-        if (!ok) return null;
+        if (!user) return null;
         return {
           id: user.id,
           email: user.email,
@@ -45,8 +69,12 @@ export const authOptions: NextAuthOptions = {
           auteurId: user.auteurId,
         };
       },
-    }),
-  ],
+    })
+  );
+}
+
+export const authOptions: NextAuthOptions = {
+  providers,
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
@@ -69,3 +97,4 @@ export const authOptions: NextAuthOptions = {
   pages: { signIn: "/login" },
   secret: process.env.NEXTAUTH_SECRET,
 };
+
