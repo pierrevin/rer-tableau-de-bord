@@ -17,6 +17,7 @@
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@floating-ui/dom": "^1.7.6",
     "@prisma/client": "^5.22.0",
     "@tiptap/core": "^3.20.0",
     "@tiptap/extension-link": "^3.20.0",
