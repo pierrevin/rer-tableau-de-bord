@@ -545,8 +545,15 @@ export function ArticlesExplorerView({
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [visibleArticles, setVisibleArticles] =
-    useState<ArticleSummary[]>(articles);
+  const getSortTime = (a: ArticleSummary) => {
+    const refDate = a.datePublication ?? a.dateDepot ?? a.createdAt;
+    if (!refDate) return 0;
+    return new Date(refDate).getTime();
+  };
+
+  const [visibleArticles, setVisibleArticles] = useState<ArticleSummary[]>(
+    () => [...articles].sort((a, b) => getSortTime(b) - getSortTime(a))
+  );
   const [selectedId, setSelectedId] = useState<string | null>(
     initialSelectedId || (articles[0]?.id ?? null)
   );
@@ -562,7 +569,8 @@ export function ArticlesExplorerView({
   // Quand les filtres / la recherche changent (nouvelles props côté serveur),
   // on réinitialise la liste visible, la pagination et la sélection si nécessaire.
   useEffect(() => {
-    setVisibleArticles(articles);
+    const sorted = [...articles].sort((a, b) => getSortTime(b) - getSortTime(a));
+    setVisibleArticles(sorted);
     setHasMore(articles.length < total);
     currentPageRef.current = initialPage;
     setSelectedId((prev) => {
@@ -613,7 +621,7 @@ export function ArticlesExplorerView({
         const merged = [
           ...prev,
           ...newArticles.filter((a) => !existingIds.has(a.id)),
-        ];
+        ].sort((a, b) => getSortTime(b) - getSortTime(a));
         if (merged.length >= data.total) {
           setHasMore(false);
         }

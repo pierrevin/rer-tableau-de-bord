@@ -104,7 +104,10 @@ export default async function AdminArticlesQueuePage({
         format: true,
         etat: true,
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: [
+        { dateDepot: "desc" },
+        { createdAt: "desc" },
+      ],
       skip,
       take,
     }),

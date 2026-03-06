@@ -610,7 +610,7 @@ export function AdminReviewExplorer({
   const searchParams = useSearchParams();
 
   const getSortTime = (a: ArticleSummary) => {
-    const refDate = a.dateDepot ?? a.createdAt;
+    const refDate = a.datePublication ?? a.dateDepot ?? a.createdAt;
     if (!refDate) return 0;
     return new Date(refDate).getTime();
   };

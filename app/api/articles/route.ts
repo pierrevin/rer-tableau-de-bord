@@ -120,7 +120,12 @@ export async function GET(request: NextRequest) {
       where,
       skip,
       take: limit,
-      orderBy: { createdAt: "desc" },
+      orderBy: [
+        // On essaie d’abord de trier par date de dépôt / publication,
+        // puis on retombe sur createdAt pour les anciens contenus.
+        { dateDepot: "desc" },
+        { createdAt: "desc" },
+      ],
       select: {
         id: true,
         titre: true,

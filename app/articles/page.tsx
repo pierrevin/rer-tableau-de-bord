@@ -29,8 +29,11 @@ type PageProps = {
 
 export default async function ArticlesPage({ searchParams }: PageProps) {
   const lastArticle = await prisma.article.findFirst({
-    orderBy: { createdAt: "desc" },
-    select: { createdAt: true },
+    orderBy: [
+      { dateDepot: "desc" },
+      { createdAt: "desc" },
+    ],
+    select: { dateDepot: true, createdAt: true },
   });
 
   const sessionUser = await getSessionUser();
@@ -147,7 +150,10 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
         format: { select: { id: true, libelle: true } },
         etat: { select: { id: true, libelle: true, slug: true } },
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: [
+        { dateDepot: "desc" },
+        { createdAt: "desc" },
+      ],
       skip,
       take,
     }),
@@ -172,7 +178,12 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
       <div className="mx-auto max-w-6xl px-4 py-8">
         <ArticlesFiltersBar
           total={total}
-          lastCreatedAt={lastArticle?.createdAt?.toISOString() ?? null}
+          lastCreatedAt={
+            lastArticle
+              ? (lastArticle.dateDepot ?? lastArticle.createdAt)?.toISOString() ??
+                null
+              : null
+          }
         />
 
         <section aria-label="Liste des articles" className="mt-4 space-y-3">
