@@ -413,7 +413,7 @@ export default function AdminReferentielsPage() {
 
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Mutuelles */}
-        <div className="space-y-2 rounded-md bg-rer-app p-3">
+        <div className="space-y-2 rounded-lg bg-rer-app p-3">
           <h2 className="text-xs font-semibold uppercase tracking-wide text-rer-muted">
             Mutuelles
           </h2>
@@ -465,7 +465,7 @@ export default function AdminReferentielsPage() {
         </div>
 
         {/* Rubriques */}
-        <div className="space-y-2 rounded-md bg-rer-app p-3">
+        <div className="space-y-2 rounded-lg bg-rer-app p-3">
           <h2 className="text-xs font-semibold uppercase tracking-wide text-rer-muted">
             Rubriques
           </h2>
@@ -517,7 +517,7 @@ export default function AdminReferentielsPage() {
         </div>
 
         {/* Formats */}
-        <div className="space-y-2 rounded-md bg-rer-app p-3">
+        <div className="space-y-2 rounded-lg bg-rer-app p-3">
           <h2 className="text-xs font-semibold uppercase tracking-wide text-rer-muted">
             Formats
           </h2>
@@ -594,7 +594,7 @@ export default function AdminReferentielsPage() {
         </div>
 
         {/* Auteurs */}
-        <div className="space-y-2 rounded-md bg-rer-app p-3">
+        <div className="space-y-2 rounded-lg bg-rer-app p-3">
           <h2 className="text-xs font-semibold uppercase tracking-wide text-rer-muted">
             Auteurs
           </h2>

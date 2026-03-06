@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import {
   getEtatBadgeClasses,
   getFormatBadgeClasses,
@@ -100,6 +100,9 @@ function transformEmbeds(html: string): string {
 export default function ArticleDetailPage() {
   const params = useParams();
   const id = params.id as string;
+  const searchParams = useSearchParams();
+  const back = searchParams.get("back");
+  const mine = searchParams.get("mine");
   const [article, setArticle] = useState<Article | null>(null);
   const [session, setSession] = useState<Session>(null);
   const [loading, setLoading] = useState(true);
@@ -137,39 +140,60 @@ export default function ArticleDetailPage() {
           .join(" · ")
       : null;
 
+  const backHref =
+    back === "mes-articles"
+      ? "/mes-articles"
+      : back === "admin"
+      ? "/admin/articles"
+      : "/articles";
+  const backLabel =
+    back === "mes-articles"
+      ? "← Retour à mes articles"
+      : back === "admin"
+      ? "← Retour à la file admin"
+      : "← Retour à la liste";
+
+  const explorerBack = back ?? "articles";
+
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
       <div className="mb-4 flex items-center justify-between gap-3">
         <Link
-          href="/articles"
+          href={backHref}
           className="text-sm font-medium text-rer-blue hover:underline"
         >
-          ← Retour à la liste
+          {backLabel}
         </Link>
         <div className="flex flex-wrap items-center gap-2 text-xs">
           {canEdit && (
             <Link
-              href={`/articles/${id}/edit`}
-              className="inline-flex items-center rounded-full border border-rer-border bg-white px-3 py-1.5 text-xs font-medium text-rer-text shadow-sm hover:bg-rer-app/60"
+              href={`/articles?view=explorer&article=${encodeURIComponent(
+                id
+              )}${
+                explorerBack
+                  ? `&back=${encodeURIComponent(explorerBack)}`
+                  : ""
+              }${mine === "1" ? "&mine=1" : ""}`}
+              className="btn-action shadow-sm"
             >
               Corriger
             </Link>
           )}
           <a
             href={`/api/articles/${id}/export?format=txt`}
-            className="inline-flex items-center rounded-md border border-rer-border bg-white px-2 py-1 text-[11px] font-medium text-rer-text hover:bg-rer-app/60"
+            className="inline-flex items-center rounded-lg border border-rer-border bg-white px-2 py-1 text-[11px] font-medium text-rer-text hover:bg-rer-app/60"
           >
             TXT
           </a>
           <a
             href={`/api/articles/${id}/export?format=html`}
-            className="inline-flex items-center rounded-md border border-rer-border bg-white px-2 py-1 text-[11px] font-medium text-rer-text hover:bg-rer-app/60"
+            className="inline-flex items-center rounded-lg border border-rer-border bg-white px-2 py-1 text-[11px] font-medium text-rer-text hover:bg-rer-app/60"
           >
             HTML
           </a>
           <a
             href={`/api/articles/${id}/export?format=word`}
-            className="inline-flex items-center rounded-md border border-rer-border bg-white px-2 py-1 text-[11px] font-medium text-rer-text hover:bg-rer-app/60"
+            className="inline-flex items-center rounded-lg border border-rer-border bg-white px-2 py-1 text-[11px] font-medium text-rer-text hover:bg-rer-app/60"
           >
             Word
           </a>
@@ -236,7 +260,7 @@ export default function ArticleDetailPage() {
         <div className="space-y-5 text-sm text-rer-text">
           {article.lienPhoto && (
             <div className="space-y-2">
-              <div className="overflow-hidden rounded-md border border-rer-border bg-rer-app">
+              <div className="overflow-hidden rounded-lg border border-rer-border bg-rer-app">
                 <img
                   src={article.lienPhoto}
                   alt={article.legendePhoto || article.titre}
@@ -265,7 +289,7 @@ export default function ArticleDetailPage() {
           )}
 
           {article.postRs && (
-            <div className="rounded-md bg-rer-app p-3">
+            <div className="rounded-lg bg-rer-app p-3">
               <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-rer-muted">
                 Post réseaux sociaux
               </p>

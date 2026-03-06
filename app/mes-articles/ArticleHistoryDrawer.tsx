@@ -16,6 +16,7 @@ type ArticleDetail = {
   titre: string;
   chapo: string | null;
   contenu: string | null;
+  lienGoogleDoc?: string | null;
   auteur: { prenom: string; nom: string } | null;
   mutuelle: { nom: string } | null;
   etat: { libelle: string; slug: string } | null;
@@ -114,15 +115,13 @@ export function ArticleHistoryDrawer({
               Modifications &amp; suggestions
             </h2>
             {article && (
-              <p className="text-xs text-rer-muted">
-                {article.titre}
-              </p>
+              <p className="text-xs text-rer-muted">{article.titre}</p>
             )}
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full border border-rer-border bg-white px-2 py-1 text-xs font-medium text-rer-muted hover:bg-rer-app"
+            className="rounded-lg border border-rer-border bg-white px-2 py-1 text-xs font-medium text-rer-muted hover:bg-rer-app"
           >
             Fermer
           </button>
@@ -144,7 +143,7 @@ export function ArticleHistoryDrawer({
 
             {article && !loading && !error && (
               <>
-                <section className="space-y-1">
+                <section className="space-y-2">
                   <div className="flex flex-wrap items-center gap-2">
                     {article.etat && (
                       <span
@@ -157,11 +156,21 @@ export function ArticleHistoryDrawer({
                       </span>
                     )}
                     {article.mutuelle && (
-                      <span className="inline-flex items-center rounded-full bg-rer-app px-2 py-0.5 text-[11px] font-medium text-rer-muted">
+                      <span className="inline-flex items-center rounded-lg bg-rer-app px-2 py-0.5 text-[11px] font-medium text-rer-muted">
                         {article.mutuelle.nom}
                       </span>
                     )}
                   </div>
+                  {article.lienGoogleDoc && (
+                    <a
+                      href={article.lienGoogleDoc}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center rounded-lg border border-rer-border bg-rer-app px-3 py-1 text-[11px] font-medium text-rer-text hover:bg-white"
+                    >
+                      Ouvrir le fichier source
+                    </a>
+                  )}
                   {article.chapo && (
                     <p className="mt-1 text-xs text-rer-text">
                       {article.chapo}
@@ -187,7 +196,7 @@ export function ArticleHistoryDrawer({
                       {article.historiques.map((event) => (
                         <li
                           key={event.id}
-                          className="rounded-md border border-rer-border bg-rer-app/40 p-2"
+                          className="rounded-lg border border-rer-border bg-rer-app/40 p-2"
                         >
                           <div className="flex items-center justify-between gap-2">
                             <div className="font-medium">

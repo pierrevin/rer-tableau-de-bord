@@ -223,7 +223,7 @@ export default function AdminUsersPage() {
         </p>
       )}
 
-      <div className="space-y-2 rounded-md bg-rer-app p-3 text-sm">
+      <div className="space-y-2 rounded-lg bg-rer-app p-3 text-sm">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-rer-muted">
           Nouvel utilisateur
         </h2>

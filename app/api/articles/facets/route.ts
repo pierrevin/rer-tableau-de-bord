@@ -22,13 +22,16 @@ export async function GET(request: NextRequest) {
   }
 
   const dateFilter: any = {};
-  if (fromParam) {
-    dateFilter.gte = new Date(fromParam);
-  } else if (sinceParam) {
-    dateFilter.gte = new Date(sinceParam);
+  const fromDate = fromParam ? new Date(fromParam) : null;
+  const sinceDate = sinceParam ? new Date(sinceParam) : null;
+  const toDate = toParam ? new Date(toParam) : null;
+  if (fromDate && !Number.isNaN(fromDate.getTime())) {
+    dateFilter.gte = fromDate;
+  } else if (sinceDate && !Number.isNaN(sinceDate.getTime())) {
+    dateFilter.gte = sinceDate;
   }
-  if (toParam) {
-    dateFilter.lte = new Date(toParam);
+  if (toDate && !Number.isNaN(toDate.getTime())) {
+    dateFilter.lte = toDate;
   }
   if (Object.keys(dateFilter).length > 0) {
     baseWhere.OR = [

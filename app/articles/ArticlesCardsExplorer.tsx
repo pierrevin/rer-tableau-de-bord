@@ -122,12 +122,13 @@ type ArticlesExplorerViewProps = {
   from?: string;
   to?: string;
   mine?: string;
+  back?: string;
   showEtat: boolean;
 };
 
 export function getEtatBadgeClasses(slug?: string, active?: boolean): string {
   const base =
-    "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium";
+    "inline-flex items-center rounded-lg border px-2 py-0.5 text-[11px] font-medium";
 
   switch (slug) {
     case "a_relire":
@@ -163,33 +164,41 @@ export function getEtatBadgeClasses(slug?: string, active?: boolean): string {
   }
 }
 
+/**
+ * Format = badge outline (bordure + texte, fond léger).
+ * Hiérarchie secondaire par rapport à la rubrique (plein).
+ */
 export function getFormatBadgeClasses(libelle?: string): string {
   const base =
-    "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium";
+    "inline-flex items-center rounded-lg border px-2 py-0.5 text-[11px] font-medium";
   if (!libelle) {
-    return base + " bg-rer-app text-rer-muted";
+    return base + " border-rer-border bg-transparent text-rer-muted";
   }
   const key = libelle.toLowerCase();
 
   if (key.includes("brève")) {
-    return base + " bg-[#FDF2F8] text-[#BE185D]";
+    return base + " border-[#BE185D]/50 bg-[#FDF2F8]/50 text-[#BE185D]";
   }
   if (key.includes("dossier")) {
-    return base + " bg-[#EEF2FF] text-[#4F46E5]";
+    return base + " border-[#4F46E5]/50 bg-[#EEF2FF]/50 text-[#4F46E5]";
   }
   if (key.includes("focus")) {
-    return base + " bg-[#FFFBEB] text-[#92400E]";
+    return base + " border-[#92400E]/50 bg-[#FFFBEB]/50 text-[#92400E]";
   }
   if (key.includes("actus") || key.includes("actu")) {
-    return base + " bg-[#EFF6FF] text-[#1D4ED8]";
+    return base + " border-[#1D4ED8]/50 bg-[#EFF6FF]/50 text-[#1D4ED8]";
   }
   // Article ou autres formats
-  return base + " bg-[#E5E7EB] text-[#111827]";
+  return base + " border-[#6B7280]/40 bg-[#F3F4F6]/80 text-[#374151]";
 }
 
+/**
+ * Rubrique = badge plein (fond coloré).
+ * Catégorie principale, plus visible que le format.
+ */
 export function getRubriqueBadgeClasses(libelle?: string): string {
   const base =
-    "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium";
+    "inline-flex items-center rounded-lg px-2 py-0.5 text-[11px] font-medium";
   if (!libelle) {
     return base + " bg-[#4B5563] text-white";
   }
@@ -297,6 +306,8 @@ type ArticleDetailContentProps = {
   error: string | null;
   detail: ArticleDetail | null;
   showEtat: boolean;
+  back?: string;
+  mine?: string;
 };
 
 function ArticleDetailContent({
@@ -306,6 +317,8 @@ function ArticleDetailContent({
   error,
   detail,
   showEtat,
+  back,
+  mine,
 }: ArticleDetailContentProps) {
   const [copyState, setCopyState] = useState<
     "idle" | "html" | "text" | "error"
@@ -385,7 +398,7 @@ function ArticleDetailContent({
             type="button"
             disabled={!canCopy}
             onClick={handleCopyHtml}
-            className={`inline-flex items-center rounded-md px-3 py-1.5 text-xs font-medium shadow-sm ${
+            className={`inline-flex items-center rounded-lg px-3 py-1.5 text-xs font-medium shadow-sm ${
               canCopy
                 ? "bg-rer-orange text-white hover:bg-[#e25730]"
                 : "bg-rer-app text-rer-muted"
@@ -401,7 +414,7 @@ function ArticleDetailContent({
             type="button"
             disabled={!canCopy}
             onClick={handleCopyText}
-            className={`inline-flex items-center rounded-md border px-3 py-1.5 text-xs font-medium ${
+            className={`inline-flex items-center rounded-lg border px-3 py-1.5 text-xs font-medium ${
               canCopy
                 ? "border-rer-border bg-white text-rer-text hover:bg-rer-app/60"
                 : "border-rer-border bg-rer-app text-rer-muted"
@@ -415,10 +428,19 @@ function ArticleDetailContent({
           </button>
           <a
             href={`/api/articles/${selectedId}/export?format=word`}
-            className="inline-flex items-center rounded-md border border-rer-border bg-white px-2 py-1 text-[11px] font-medium text-rer-text hover:bg-rer-app/60"
+            className="inline-flex items-center rounded-lg border border-rer-border bg-white px-2 py-1 text-[11px] font-medium text-rer-text hover:bg-rer-app/60"
           >
             Exporter Word
           </a>
+          <Link
+            href={`/articles/${selectedId}${back || mine ? `?${new URLSearchParams({
+              ...(back && { back }),
+              ...(mine === "1" && { mine: "1" }),
+            }).toString()}` : ""}`}
+            className="inline-flex items-center rounded-lg border border-rer-border bg-white px-2 py-1 text-[11px] font-medium text-rer-text hover:bg-rer-app/60"
+          >
+            Ouvrir en pleine page
+          </Link>
         </div>
       </div>
 
@@ -461,7 +483,7 @@ function ArticleDetailContent({
 
           {detail.lienPhoto && (
             <div className="space-y-2">
-              <div className="overflow-hidden rounded-md border border-rer-border bg-rer-app">
+              <div className="overflow-hidden rounded-lg border border-rer-border bg-rer-app">
                 <img
                   src={detail.lienPhoto}
                   alt={detail.legendePhoto || detail.titre}
@@ -472,14 +494,14 @@ function ArticleDetailContent({
                 <a
                   href={detail.lienPhoto}
                   download
-                  className="inline-flex items-center rounded-md border border-rer-border bg-white px-2 py-1 text-[11px] font-medium text-rer-text hover:bg-rer-app/60"
+                  className="inline-flex items-center rounded-lg border border-rer-border bg-white px-2 py-1 text-[11px] font-medium text-rer-text hover:bg-rer-app/60"
                 >
                   Télécharger l’image
                 </a>
                 <button
                   type="button"
                   onClick={handleCopyImageUrl}
-                  className="inline-flex items-center rounded-md border border-rer-border bg-rer-app px-2 py-1 text-[11px] font-medium text-rer-text hover:bg-rer-app/80"
+                  className="inline-flex items-center rounded-lg border border-rer-border bg-rer-app px-2 py-1 text-[11px] font-medium text-rer-text hover:bg-rer-app/80"
                 >
                   {imageCopyState === "copied"
                     ? "URL copiée"
@@ -510,7 +532,7 @@ function ArticleDetailContent({
           )}
 
           {detail.postRs && (
-            <div className="rounded-md bg-rer-app p-3">
+            <div className="rounded-lg bg-rer-app p-3">
               <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
                 Post réseaux sociaux
               </p>
@@ -540,6 +562,7 @@ export function ArticlesExplorerView({
   from = "",
   to = "",
   mine = "",
+  back = "",
   showEtat,
 }: ArticlesExplorerViewProps) {
   const router = useRouter();
@@ -701,7 +724,11 @@ export function ArticlesExplorerView({
   };
 
   const handleOpenFull = (id: string) => {
-    router.push(`/articles/${id}`);
+    const params = new URLSearchParams();
+    if (back) params.set("back", back);
+    if (mine === "1") params.set("mine", "1");
+    const query = params.toString();
+    router.push(`/articles/${id}${query ? `?${query}` : ""}`);
   };
 
   const handleExportWord = (id: string) => {
@@ -739,7 +766,7 @@ export function ArticlesExplorerView({
 
   if (!visibleArticles.length) {
     return (
-      <p className="rounded-md bg-white px-3 py-6 text-center text-sm text-rer-muted shadow-sm ring-1 ring-rer-border">
+      <p className="rounded-lg bg-white px-3 py-6 text-center text-sm text-rer-muted shadow-sm ring-1 ring-rer-border">
         Aucun article ne correspond à ces critères. Essayez d&apos;élargir
         votre recherche ou de modifier les filtres.
       </p>
@@ -859,6 +886,8 @@ export function ArticlesExplorerView({
               error={error}
               detail={detail}
               showEtat={showEtat}
+              back={back}
+              mine={mine}
             />
           )}
         </div>
@@ -880,7 +909,7 @@ export function ArticlesExplorerView({
               <button
                 type="button"
                 onClick={() => setIsDrawerOpen(false)}
-                className="rounded-full border border-rer-border bg-white px-2 py-1 text-xs text-rer-muted hover:bg-rer-app/60"
+                className="rounded-lg border border-rer-border bg-white px-2 py-1 text-xs text-rer-muted hover:bg-rer-app/60"
               >
                 Fermer
               </button>
@@ -893,7 +922,8 @@ export function ArticlesExplorerView({
                 error={error}
                 detail={detail}
                 showEtat={showEtat}
-                onDelete={handleDelete}
+                back={back}
+                mine={mine}
               />
             </div>
           </div>

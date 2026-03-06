@@ -412,7 +412,7 @@ export function ArticlesFiltersBar({
               onChange={(event) => setInputValue(event.target.value)}
               onFocus={() => inputValue.trim().length >= 2 && setShowSuggestions(true)}
               placeholder="Titre, chapô, contenu, ou nom de mutuelle / rubrique / format..."
-              className="mt-1 w-full rounded-md border border-rer-border bg-white px-3 py-1.5 text-sm text-rer-text shadow-sm focus:border-rer-blue focus:outline-none focus:ring-1 focus:ring-rer-blue"
+              className="mt-1 w-full rounded-lg border border-rer-border bg-white px-3 py-1.5 text-sm text-rer-text shadow-sm focus:border-rer-blue focus:outline-none focus:ring-1 focus:ring-rer-blue"
               autoComplete="off"
               aria-expanded={hasSuggestions}
               aria-controls="search-suggestions"
@@ -424,7 +424,7 @@ export function ArticlesFiltersBar({
             <div
               id="search-suggestions"
               role="listbox"
-              className="absolute top-full left-0 right-0 z-50 mt-1 max-h-72 overflow-y-auto rounded-md border border-rer-border bg-white py-1 shadow-lg"
+              className="absolute top-full left-0 right-0 z-50 mt-1 max-h-72 overflow-y-auto rounded-lg border border-rer-border bg-white py-1 shadow-lg"
             >
               {loadingSuggestions ? (
                 <p className="px-3 py-2 text-xs text-rer-muted">Recherche des suggestions…</p>
@@ -504,7 +504,7 @@ export function ArticlesFiltersBar({
           )}
         </div>
 
-        <div className="hidden items-center gap-1 rounded-full border border-rer-border bg-rer-app p-1 text-xs font-medium text-rer-muted lg:flex">
+        <div className="hidden items-center gap-1 rounded-lg border border-rer-border bg-rer-app p-1 text-xs font-medium text-rer-muted lg:flex">
           <Link
             href={{
               pathname,
@@ -513,10 +513,10 @@ export function ArticlesFiltersBar({
                 view: "explorer",
               },
             }}
-            className={`rounded-full px-3 py-1 ${
+            className={`rounded-lg px-3 py-1.5 ${
               currentView === "explorer"
                 ? "bg-white text-rer-blue shadow-sm"
-                : "text-rer-muted hover:bg-white/60"
+                : "hover:bg-white/60"
             }`}
           >
             Explorer
@@ -529,10 +529,10 @@ export function ArticlesFiltersBar({
                 view: "cards",
               },
             }}
-            className={`rounded-full px-3 py-1 ${
+            className={`rounded-lg px-3 py-1.5 ${
               currentView === "cards"
                 ? "bg-white text-rer-blue shadow-sm"
-                : "text-rer-muted hover:bg-white/60"
+                : "hover:bg-white/60"
             }`}
           >
             Cartes
@@ -545,10 +545,10 @@ export function ArticlesFiltersBar({
                 view: "table",
               },
             }}
-            className={`rounded-full px-3 py-1 ${
+            className={`rounded-lg px-3 py-1.5 ${
               currentView === "table"
                 ? "bg-white text-rer-blue shadow-sm"
-                : "text-rer-muted hover:bg-white/60"
+                : "hover:bg-white/60"
             }`}
           >
             Tableau
@@ -604,11 +604,11 @@ export function ArticlesFiltersBar({
               key={`active-mutuelle-${m.id}`}
               type="button"
               onClick={() => handleFacetToggle("mutuelle", m.id)}
-              className="inline-flex items-center gap-1 rounded-full bg-rer-blue px-2 py-0.5 text-xs font-medium text-white"
+              className="chip-filter chip-filter--active inline-flex items-center gap-1"
             >
               <span>{m.nom}</span>
-              <span className="ml-0.5 text-[10px] opacity-80">· {m.count}</span>
-              <span className="ml-1 text-[11px] leading-none">×</span>
+              <span className="text-[10px] opacity-80">· {m.count}</span>
+              <span className="text-[11px] leading-none">×</span>
             </button>
           ))}
           {activeRubriqueFacets.map((r) => (
@@ -616,10 +616,10 @@ export function ArticlesFiltersBar({
               key={`active-rubrique-${r.id}`}
               type="button"
               onClick={() => handleFacetToggle("rubrique", r.id)}
-              className="inline-flex items-center gap-1 rounded-full bg-slate-900 px-2 py-0.5 text-xs font-medium text-white"
+              className="chip-filter chip-filter--active inline-flex items-center gap-1"
             >
               <span>{r.libelle}</span>
-              <span className="ml-1 text-[11px] leading-none">×</span>
+              <span className="text-[11px] leading-none">×</span>
             </button>
           ))}
           {activeFormatFacets.map((f) => (
@@ -627,17 +627,17 @@ export function ArticlesFiltersBar({
               key={`active-format-${f.id}`}
               type="button"
               onClick={() => handleFacetToggle("format", f.id)}
-              className="inline-flex items-center gap-1 rounded-full bg-slate-900 px-2 py-0.5 text-xs font-medium text-white"
+              className="chip-filter chip-filter--active inline-flex items-center gap-1"
             >
               <span>{f.libelle}</span>
-              <span className="ml-1 text-[11px] leading-none">×</span>
+              <span className="text-[11px] leading-none">×</span>
             </button>
           ))}
         </div>
       )}
 
       {!isCollapsed && facets && (
-        <div className="space-y-1 rounded-md border border-rer-border bg-rer-app/60 p-2 text-xs">
+        <div className="space-y-1 rounded-lg border border-rer-border bg-rer-app/60 p-2 text-xs">
           <div className="flex flex-wrap items-center gap-1">
             <span className="font-semibold text-slate-700">Mutuelles</span>
             {facets.mutuelles.length === 0 && (
@@ -650,11 +650,7 @@ export function ArticlesFiltersBar({
                   key={m.id}
                   type="button"
                   onClick={() => handleFacetToggle("mutuelle", m.id)}
-                  className={`inline-flex items-center rounded-full px-2 py-0.5 transition ${
-                    active
-                      ? "bg-slate-900 text-white"
-                      : "bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100"
-                  }`}
+                  className={`chip-filter ${active ? "chip-filter--active" : ""}`}
                 >
                   <span className="truncate">{m.nom}</span>
                   <span className="ml-1 text-[10px] opacity-80">· {m.count}</span>
@@ -675,11 +671,7 @@ export function ArticlesFiltersBar({
                   key={r.id}
                   type="button"
                   onClick={() => handleFacetToggle("rubrique", r.id)}
-                  className={`inline-flex items-center rounded-full px-2 py-0.5 transition ${
-                    active
-                      ? "bg-slate-900 text-white"
-                      : "bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100"
-                  }`}
+                  className={`chip-filter ${active ? "chip-filter--active" : ""}`}
                 >
                   <span className="truncate">{r.libelle}</span>
                   <span className="ml-1 text-[10px] opacity-80">· {r.count}</span>
@@ -700,11 +692,7 @@ export function ArticlesFiltersBar({
                   key={f.id}
                   type="button"
                   onClick={() => handleFacetToggle("format", f.id)}
-                  className={`inline-flex items-center rounded-full px-2 py-0.5 transition ${
-                    active
-                      ? "bg-slate-900 text-white"
-                      : "bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100"
-                  }`}
+                  className={`chip-filter ${active ? "chip-filter--active" : ""}`}
                 >
                   <span className="truncate">{f.libelle}</span>
                   <span className="ml-1 text-[10px] opacity-80">· {f.count}</span>
@@ -718,33 +706,21 @@ export function ArticlesFiltersBar({
             <button
               type="button"
               onClick={() => handleDatePresetClick("1m")}
-              className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs transition ${
-                datePreset === "1m"
-                  ? "bg-rer-blue text-white"
-                  : "bg-white text-rer-text ring-1 ring-rer-border hover:bg-rer-app"
-              }`}
+              className={`chip-filter ${datePreset === "1m" ? "chip-filter--active" : ""}`}
             >
               Depuis 1 mois
             </button>
             <button
               type="button"
               onClick={() => handleDatePresetClick("3m")}
-              className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs transition ${
-                datePreset === "3m"
-                  ? "bg-rer-blue text-white"
-                  : "bg-white text-rer-text ring-1 ring-rer-border hover:bg-rer-app"
-              }`}
+              className={`chip-filter ${datePreset === "3m" ? "chip-filter--active" : ""}`}
             >
               Depuis 3 mois
             </button>
             <button
               type="button"
               onClick={() => handleDatePresetClick("6m")}
-              className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs transition ${
-                datePreset === "6m"
-                  ? "bg-rer-blue text-white"
-                  : "bg-white text-rer-text ring-1 ring-rer-border hover:bg-rer-app"
-              }`}
+              className={`chip-filter ${datePreset === "6m" ? "chip-filter--active" : ""}`}
             >
               Depuis 6 mois
             </button>

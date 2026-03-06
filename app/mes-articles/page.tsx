@@ -204,6 +204,8 @@ export default async function MesArticlesPage({ searchParams }: PageProps) {
     return {
       id: article.id,
       titre: article.titre,
+      chapo: article.chapo ?? null,
+      lienPhoto: article.lienPhoto ?? null,
       rubrique: article.rubrique?.libelle ?? null,
       format: article.format?.libelle ?? null,
       mutuelle: article.mutuelle?.nom ?? null,
@@ -219,9 +221,20 @@ export default async function MesArticlesPage({ searchParams }: PageProps) {
   return (
     <main>
       <div className="mx-auto max-w-6xl px-4 py-8 space-y-4">
-        <header className="space-y-1">
-          <h1 className="text-2xl font-semibold text-rer-text">Mes articles</h1>
-          <p className="text-sm text-rer-muted">{statusSummary}</p>
+        <header className="flex flex-wrap items-center justify-between gap-3">
+          <div className="space-y-1">
+            <h1 className="text-2xl font-semibold text-rer-text">Mes articles</h1>
+            <p className="text-sm text-rer-muted">{statusSummary}</p>
+          </div>
+          <a
+            href="/articles/depot"
+            className="btn-cta"
+          >
+            <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-white/10 text-base leading-none">
+              +
+            </span>
+            <span>Nouvel article</span>
+          </a>
         </header>
 
         <MesArticlesFiltersBar

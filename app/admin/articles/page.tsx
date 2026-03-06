@@ -52,13 +52,16 @@ export default async function AdminArticlesQueuePage({
   }
 
   const createdAtFilter: any = {};
-  if (fromParam) {
-    createdAtFilter.gte = new Date(fromParam);
-  } else if (sinceParam) {
-    createdAtFilter.gte = new Date(sinceParam);
+  const fromDate = fromParam ? new Date(fromParam) : null;
+  const sinceDate = sinceParam ? new Date(sinceParam) : null;
+  const toDate = toParam ? new Date(toParam) : null;
+  if (fromDate && !Number.isNaN(fromDate.getTime())) {
+    createdAtFilter.gte = fromDate;
+  } else if (sinceDate && !Number.isNaN(sinceDate.getTime())) {
+    createdAtFilter.gte = sinceDate;
   }
-  if (toParam) {
-    createdAtFilter.lte = new Date(toParam);
+  if (toDate && !Number.isNaN(toDate.getTime())) {
+    createdAtFilter.lte = toDate;
   }
   if (Object.keys(createdAtFilter).length > 0) {
     where.createdAt = createdAtFilter;

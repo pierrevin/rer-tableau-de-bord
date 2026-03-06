@@ -73,7 +73,7 @@ function LoginPageInner() {
               autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 w-full rounded-md border border-rer-border bg-white px-3 py-2 text-sm text-rer-text shadow-sm focus:border-rer-blue focus:outline-none focus:ring-1 focus:ring-rer-blue"
+              className="mt-1 w-full rounded-lg border border-rer-border bg-white px-3 py-2 text-sm text-rer-text shadow-sm focus:border-rer-blue focus:outline-none focus:ring-1 focus:ring-rer-blue"
               required
             />
           </div>
@@ -91,7 +91,7 @@ function LoginPageInner() {
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 w-full rounded-md border border-rer-border bg-white px-3 py-2 text-sm text-rer-text shadow-sm focus:border-rer-blue focus:outline-none focus:ring-1 focus:ring-rer-blue"
+              className="mt-1 w-full rounded-lg border border-rer-border bg-white px-3 py-2 text-sm text-rer-text shadow-sm focus:border-rer-blue focus:outline-none focus:ring-1 focus:ring-rer-blue"
               required
             />
           </div>

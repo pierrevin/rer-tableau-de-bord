@@ -1,6 +1,10 @@
  "use client";
 
 import { useEffect, useRef } from "react";
+import {
+  getFormatBadgeClasses,
+  getRubriqueBadgeClasses,
+} from "@/app/articles/ArticlesCardsExplorer";
 import RichArticleEditor from "./RichArticleEditor";
 
 export type ArticleEditorValue = {
@@ -148,7 +152,7 @@ export function ArticleEditorCard({
               value={legendePhoto || ""}
               onChange={(e) => onChange({ legendePhoto: e.target.value })}
               placeholder="Légende de l’image principale…"
-              className="w-full rounded-md border border-rer-border px-2 py-1 text-xs text-rer-text placeholder:text-rer-muted focus:border-rer-blue focus:outline-none focus:ring-1 focus:ring-rer-blue"
+              className="w-full rounded-lg border border-rer-border px-2 py-1 text-xs text-rer-text placeholder:text-rer-muted focus:border-rer-blue focus:outline-none focus:ring-1 focus:ring-rer-blue"
             />
           </div>
         )}
@@ -158,31 +162,50 @@ export function ArticleEditorCard({
       <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-rer-border">
         <div className="space-y-5">
           <div className="flex flex-wrap items-center gap-3 text-xs text-rer-muted">
-            {/* Format */}
+            {/* Format — style outline (aligné avec badges partout ailleurs) */}
             <div className="relative inline-flex items-center">
               <details className="group">
-                <summary className="flex cursor-pointer list-none items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-[11px] font-medium text-blue-700">
-                  <span className="truncate">
+                <summary className="flex cursor-pointer list-none items-center gap-2 rounded-lg px-2 py-1 text-[11px] font-medium">
+                  <span
+                    className={`truncate ${
+                      formatId
+                        ? (() => {
+                            const f = referentiels.formats.find(
+                              (fmt) => fmt.id === formatId
+                            );
+                            return f
+                              ? getFormatBadgeClasses(f.libelle)
+                              : "border border-rer-border bg-rer-app text-rer-muted rounded-lg px-2 py-0.5";
+                          })()
+                        : "border border-rer-border bg-rer-app text-rer-muted rounded-lg px-2 py-0.5"
+                    }`}
+                  >
                     {formatId
                       ? (() => {
-                          const f = referentiels.formats.find((fmt) => fmt.id === formatId);
+                          const f = referentiels.formats.find(
+                            (fmt) => fmt.id === formatId
+                          );
                           if (!f) return "Choisir un format";
                           const extra =
-                            f.signesReference != null ? ` (${f.signesReference} signes)` : "";
+                            f.signesReference != null
+                              ? ` (${f.signesReference} signes)`
+                              : "";
                           return `${f.libelle}${extra}`;
                         })()
                       : "Choisir un format"}
                   </span>
-                  <span className="text-[9px]">▾</span>
+                  <span className="text-[9px] text-rer-muted">▾</span>
                 </summary>
-                <div className="absolute z-20 mt-2 w-64 rounded-xl border border-blue-200 bg-white py-1 text-[12px] shadow-lg">
+                <div className="absolute z-20 mt-2 w-64 rounded-lg border border-rer-border bg-white py-1 text-[12px] shadow-lg">
                   {referentiels.formats.map((f) => (
                     <button
                       key={f.id}
                       type="button"
                       onClick={() => onChange({ formatId: f.id })}
-                      className={`flex w-full items-center justify-between px-3 py-1.5 text-left hover:bg-blue-50 ${
-                        formatId === f.id ? "font-semibold text-blue-700" : "text-rer-text"
+                      className={`flex w-full items-center justify-between rounded-lg px-3 py-1.5 text-left hover:bg-rer-app ${
+                        formatId === f.id
+                          ? "font-semibold text-rer-blue bg-rer-app/50"
+                          : "text-rer-text"
                       }`}
                     >
                       <span>{f.libelle}</span>
@@ -197,28 +220,45 @@ export function ArticleEditorCard({
               </details>
             </div>
 
-            {/* Rubrique */}
+            {/* Rubrique — style plein (aligné avec badges partout ailleurs) */}
             <div className="relative inline-flex items-center">
               <details className="group">
-                <summary className="flex cursor-pointer list-none items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-medium text-emerald-700">
-                  <span className="truncate">
+                <summary className="flex cursor-pointer list-none items-center gap-2 rounded-lg px-2 py-1 text-[11px] font-medium">
+                  <span
+                    className={`truncate ${
+                      rubriqueId
+                        ? (() => {
+                            const r = referentiels.rubriques.find(
+                              (rb) => rb.id === rubriqueId
+                            );
+                            return r
+                              ? getRubriqueBadgeClasses(r.libelle)
+                              : "border border-rer-border bg-rer-app text-rer-muted rounded-lg px-2 py-0.5";
+                          })()
+                        : "border border-rer-border bg-rer-app text-rer-muted rounded-lg px-2 py-0.5"
+                    }`}
+                  >
                     {rubriqueId
                       ? (() => {
-                          const r = referentiels.rubriques.find((rb) => rb.id === rubriqueId);
+                          const r = referentiels.rubriques.find(
+                            (rb) => rb.id === rubriqueId
+                          );
                           return r?.libelle ?? "Choisir une rubrique";
                         })()
                       : "Choisir une rubrique"}
                   </span>
-                  <span className="text-[9px]">▾</span>
+                  <span className="text-[9px] text-rer-muted">▾</span>
                 </summary>
-                <div className="absolute z-20 mt-2 w-56 rounded-xl border border-emerald-200 bg-white py-1 text-[12px] shadow-lg">
+                <div className="absolute z-20 mt-2 w-56 rounded-lg border border-rer-border bg-white py-1 text-[12px] shadow-lg">
                   {referentiels.rubriques.map((r) => (
                     <button
                       key={r.id}
                       type="button"
                       onClick={() => onChange({ rubriqueId: r.id })}
-                      className={`flex w-full items-center px-3 py-1.5 text-left hover:bg-emerald-50 ${
-                        rubriqueId === r.id ? "font-semibold text-emerald-700" : "text-rer-text"
+                      className={`flex w-full items-center rounded-lg px-3 py-1.5 text-left hover:bg-rer-app ${
+                        rubriqueId === r.id
+                          ? "font-semibold text-rer-blue bg-rer-app/50"
+                          : "text-rer-text"
                       }`}
                     >
                       {r.libelle}
@@ -231,7 +271,7 @@ export function ArticleEditorCard({
             {/* Signature */}
             <div className="relative inline-flex items-center">
               <details className="group">
-                <summary className="flex cursor-pointer list-none items-center gap-2 rounded-full border border-purple-200 bg-purple-50 px-3 py-1 text-[11px] font-medium text-purple-700">
+                <summary className="flex cursor-pointer list-none items-center gap-2 rounded-lg border border-rer-border bg-rer-app px-3 py-1.5 text-[11px] font-medium text-rer-text">
                   <span className="truncate">
                     {auteurId
                       ? (() => {
@@ -246,9 +286,9 @@ export function ArticleEditorCard({
                         })()
                       : "Choisir une signature"}
                   </span>
-                  <span className="text-[9px]">▾</span>
+                  <span className="text-[9px] text-rer-muted">▾</span>
                 </summary>
-                <div className="absolute z-20 mt-2 w-64 rounded-xl border border-purple-200 bg-white py-1 text-[12px] shadow-lg">
+                <div className="absolute z-20 mt-2 w-64 rounded-lg border border-rer-border bg-white py-1 text-[12px] shadow-lg">
                   {referentiels.auteurs.map((a) => {
                     const mId = (a as any).mutuelleId as string | undefined;
                     const mutuelle =
@@ -266,8 +306,10 @@ export function ArticleEditorCard({
                             mutuelleId: mId || undefined,
                           })
                         }
-                        className={`flex w-full items-center px-3 py-1.5 text-left hover:bg-purple-50 ${
-                          auteurId === a.id ? "font-semibold text-purple-700" : "text-rer-text"
+                        className={`flex w-full items-center rounded-lg px-3 py-1.5 text-left hover:bg-rer-app ${
+                          auteurId === a.id
+                            ? "font-semibold text-rer-blue bg-rer-app/50"
+                            : "text-rer-text"
                         }`}
                       >
                         {label}
@@ -333,7 +375,7 @@ export function ArticleEditorCard({
 
       {/* Bloc Post réseaux sociaux */}
       <section className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-rer-border">
-        <div className="rounded-md bg-rer-app p-3">
+        <div className="rounded-lg bg-rer-app p-3">
           <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
             Post réseaux sociaux
           </p>
@@ -342,7 +384,7 @@ export function ArticleEditorCard({
             onChange={(e) => onChange({ postRs: e.target.value })}
             rows={4}
             placeholder="Proposition de texte pour les réseaux sociaux…"
-            className="w-full resize-none rounded-md border border-rer-border bg-white px-2 py-1 text-sm text-rer-text placeholder:text-rer-muted focus:border-rer-blue focus:outline-none focus:ring-1 focus:ring-rer-blue"
+            className="w-full resize-none rounded-lg border border-rer-border bg-white px-2 py-1 text-sm text-rer-text placeholder:text-rer-muted focus:border-rer-blue focus:outline-none focus:ring-1 focus:ring-rer-blue"
           />
         </div>
       </section>

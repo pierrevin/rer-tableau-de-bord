@@ -1,7 +1,7 @@
  "use client";
 
-import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { ArticleReadSidePanel } from "@/app/articles/ArticleReadSidePanel";
 
 type ArticleSummary = {
   id: string;
@@ -50,8 +50,19 @@ export function ArticlesCardsView({
   const [articles, setArticles] = useState<ArticleSummary[]>(initialArticles);
   const [hasMore, setHasMore] = useState(initialArticles.length < total);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [selectedArticleId, setSelectedArticleId] = useState<string | null>(null);
+  const [panelOpen, setPanelOpen] = useState(false);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const currentPageRef = useRef(initialPage);
+
+  const openArticlePanel = (id: string) => {
+    setSelectedArticleId(id);
+    setPanelOpen(true);
+  };
+  const closeArticlePanel = () => {
+    setPanelOpen(false);
+    setSelectedArticleId(null);
+  };
 
   // Quand les filtres ou la recherche changent (et que le serveur renvoie un nouveau jeu initial),
   // on réinitialise la liste et la pagination client.
@@ -136,7 +147,7 @@ export function ArticlesCardsView({
   if (!articles.length) {
     return (
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        <p className="col-span-full rounded-md bg-white px-3 py-6 text-center text-sm text-rer-muted shadow-sm ring-1 ring-rer-border">
+        <p className="col-span-full rounded-lg bg-white px-3 py-6 text-center text-sm text-rer-muted shadow-sm ring-1 ring-rer-border">
           Aucun article ne correspond à ces critères. Essayez d&apos;élargir
           votre recherche ou de modifier les filtres.
         </p>
@@ -150,7 +161,13 @@ export function ArticlesCardsView({
         {articles.map((article) => (
           <article
             key={article.id}
-            className="flex h-full flex-col overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-rer-border sm:flex-row"
+            role="button"
+            tabIndex={0}
+            onClick={() => openArticlePanel(article.id)}
+            onKeyDown={(e) =>
+              e.key === "Enter" && openArticlePanel(article.id)
+            }
+            className="flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-rer-border transition hover:ring-rer-blue/50 sm:flex-row"
           >
             <div className="relative h-40 w-full bg-rer-app sm:h-auto sm:w-40 sm:flex-none">
               {article.lienPhoto ? (
@@ -167,12 +184,9 @@ export function ArticlesCardsView({
               )}
             </div>
             <div className="flex flex-1 flex-col gap-2 p-4">
-              <Link
-                href={`/articles/${article.id}`}
-                className="text-base font-semibold text-rer-text hover:underline sm:text-lg"
-              >
+              <span className="text-base font-semibold text-rer-text sm:text-lg">
                 {article.titre}
-              </Link>
+              </span>
               {article.chapo && (
                 <p className="line-clamp-2 text-sm text-rer-muted">
                   {article.chapo}
@@ -211,6 +225,13 @@ export function ArticlesCardsView({
           </p>
         )}
       </div>
+
+      <ArticleReadSidePanel
+        articleId={selectedArticleId}
+        open={panelOpen}
+        onClose={closeArticlePanel}
+        backParam="articles"
+      />
     </>
   );
 }

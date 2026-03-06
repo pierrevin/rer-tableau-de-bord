@@ -1,14 +1,20 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
-import { getEtatBadgeClasses } from "../articles/ArticlesCardsExplorer";
+import {
+  getEtatBadgeClasses,
+  getFormatBadgeClasses,
+  getRubriqueBadgeClasses,
+} from "../articles/ArticlesCardsExplorer";
 import { ArticleHistoryDrawer } from "./ArticleHistoryDrawer";
+import { MesArticleSidePanel } from "./MesArticleSidePanel";
 
 type MesArticleRow = {
   id: string;
   titre: string;
+  chapo: string | null;
+  lienPhoto: string | null;
   rubrique: string | null;
   format: string | null;
   mutuelle: string | null;
@@ -42,6 +48,10 @@ export function MesArticlesTable({
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyArticleId, setHistoryArticleId] = useState<string | null>(null);
 
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [panelMode, setPanelMode] = useState<"view" | "edit">("view");
+
   const openHistory = (articleId: string) => {
     setHistoryArticleId(articleId);
     setHistoryOpen(true);
@@ -73,6 +83,47 @@ export function MesArticlesTable({
     setSelectedIds([]);
   };
 
+  const handleEditClick = async (article: MesArticleRow) => {
+    try {
+      if (
+        article.etatSlug &&
+        article.etatSlug !== "brouillon" &&
+        article.etatSlug !== "a_relire"
+      ) {
+        await fetch(`/api/articles/${article.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ etatSlug: "a_relire" }),
+        });
+      }
+      setSelectedId(article.id);
+      setPanelMode("edit");
+      setPanelOpen(true);
+    } catch {
+      // en cas d'erreur réseau sur le PATCH, on tente quand même d’ouvrir l’explorateur
+      setSelectedId(article.id);
+      setPanelMode("edit");
+      setPanelOpen(true);
+    }
+  };
+
+  const openPanelView = (articleId: string) => {
+    setSelectedId(articleId);
+    setPanelMode("view");
+    setPanelOpen(true);
+  };
+
+  const openPanelEdit = (articleId: string) => {
+    setSelectedId(articleId);
+    setPanelMode("edit");
+    setPanelOpen(true);
+  };
+
+  const closePanel = () => {
+    setPanelOpen(false);
+    setSelectedId(null);
+  };
+
   const handleBulkDelete = async () => {
     if (!selectedIds.length) return;
     const confirmed = window.confirm(
@@ -89,6 +140,27 @@ export function MesArticlesTable({
       router.refresh();
     } catch {
       alert("Erreur réseau lors de la suppression en masse.");
+    }
+  };
+
+  const handleDeleteOne = async (article: MesArticleRow) => {
+    if (article.etatSlug !== "a_relire") return;
+    const confirmed = window.confirm(
+      "Supprimer définitivement cet article ?"
+    );
+    if (!confirmed) return;
+    try {
+      const res = await fetch(`/api/articles/${article.id}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        if (selectedId === article.id) closePanel();
+        router.refresh();
+      } else {
+        alert("Impossible de supprimer l'article.");
+      }
+    } catch {
+      alert("Erreur réseau lors de la suppression.");
     }
   };
 
@@ -122,7 +194,7 @@ export function MesArticlesTable({
                 setBulkMode(true);
               }
             }}
-            className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-medium ${
+            className={`inline-flex items-center rounded-lg border px-3 py-1.5 text-[11px] font-medium ${
               bulkMode
                 ? "border-rer-blue bg-rer-blue text-white"
                 : "border-rer-border bg-white text-rer-text hover:bg-rer-app"
@@ -134,7 +206,7 @@ export function MesArticlesTable({
             <span className="text-[11px] text-rer-muted">
               {selectedIds.length
                 ? `${selectedIds.length} article(s) sélectionné(s)`
-                : "Cliquez sur « Sélectionner » dans la colonne Actions"}
+                : "Cliquez sur le rond à gauche de chaque ligne"}
             </span>
           )}
         </div>
@@ -142,7 +214,7 @@ export function MesArticlesTable({
           <button
             type="button"
             onClick={handleBulkDelete}
-            className="inline-flex items-center rounded-full border border-red-200 bg-red-50 px-3 py-1 text-[11px] font-medium text-red-600 hover:bg-red-100"
+            className="inline-flex items-center rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-[11px] font-medium text-red-600 hover:bg-red-100"
           >
             Supprimer la sélection ({selectedIds.length})
           </button>
@@ -152,6 +224,10 @@ export function MesArticlesTable({
         <table className="min-w-full divide-y divide-rer-border bg-white shadow-sm ring-1 ring-rer-border">
           <thead className="bg-rer-blue text-white">
             <tr>
+              <th className="w-6 px-3 py-2" aria-hidden="true" />
+              <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-white/90">
+                Photo
+              </th>
               <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-white/90">
                 Titre
               </th>
@@ -159,16 +235,10 @@ export function MesArticlesTable({
                 Rubrique / Format
               </th>
               <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-white/90">
-                Mutuelle
-              </th>
-              <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-white/90">
                 État
               </th>
               <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-white/90">
-                Dernière action
-              </th>
-              <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-white/90">
-                Dernière modification
+                Dernière activité
               </th>
               <th className="px-3 py-2 text-right text-[11px] font-semibold uppercase tracking-wide text-white/90">
                 Actions
@@ -176,33 +246,93 @@ export function MesArticlesTable({
             </tr>
           </thead>
           <tbody className="divide-y divide-rer-border">
-            {articles.map((article) => (
-              <tr key={article.id} className="hover:bg-rer-app">
-                <td className="px-3 py-2 align-top text-sm text-rer-text">
-                  <Link
-                    href={`/articles/${article.id}`}
-                    className="font-semibold text-rer-blue hover:underline"
-                  >
-                    {article.titre}
-                  </Link>
-                </td>
-                <td className="px-3 py-2 align-top text-xs text-rer-muted">
-                  <div className="space-y-0.5">
-                    <div>{article.rubrique ?? "Rubrique non renseignée"}</div>
-                    <div className="text-[11px]">
-                      {article.format ?? "Format non renseigné"}
-                    </div>
+            {articles.map((article) => {
+              const isSelected = selectedIds.includes(article.id);
+              return (
+                <tr
+                  key={article.id}
+                  onClick={() => {
+                    if (bulkMode) {
+                      toggleSelected(article.id);
+                    }
+                  }}
+                  className={`hover:bg-rer-app ${
+                    bulkMode && isSelected ? "bg-rer-blue/5" : ""
+                  } ${bulkMode ? "cursor-pointer" : ""}`}
+                >
+                  <td className="px-3 py-2 align-top">
+                    {bulkMode && (
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          toggleSelected(article.id);
+                        }}
+                        className={`flex h-3.5 w-3.5 items-center justify-center rounded-full border ${
+                          isSelected
+                            ? "border-rer-blue bg-rer-blue"
+                            : "border-rer-border bg-white hover:bg-rer-app"
+                        }`}
+                        aria-pressed={isSelected}
+                        aria-label={
+                          isSelected
+                            ? "Désélectionner cet article"
+                            : "Sélectionner cet article"
+                        }
+                      />
+                    )}
+                  </td>
+                  <td className="px-3 py-2 align-top">
+                    {article.lienPhoto ? (
+                      <div className="h-14 w-14 overflow-hidden rounded-lg border border-rer-border bg-rer-app">
+                        <img
+                          src={article.lienPhoto}
+                          alt=""
+                          className="h-full w-full object-cover"
+                          loading="lazy"
+                        />
+                      </div>
+                    ) : (
+                      <div className="h-14 w-14 rounded-lg border border-dashed border-rer-border bg-rer-app" />
+                    )}
+                  </td>
+                  <td className="px-3 py-2 align-top text-sm text-rer-text">
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        openPanelView(article.id);
+                      }}
+                      className="font-semibold text-rer-blue hover:underline text-left"
+                    >
+                      {article.titre}
+                    </button>
+                    {article.chapo && (
+                      <p className="mt-0.5 line-clamp-2 text-xs text-rer-muted">
+                        {article.chapo}
+                      </p>
+                    )}
+                  </td>
+                <td className="px-3 py-2 align-top text-xs">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span
+                      className={getRubriqueBadgeClasses(article.rubrique ?? undefined)}
+                    >
+                      {article.rubrique ?? "—"}
+                    </span>
+                    <span
+                      className={getFormatBadgeClasses(article.format ?? undefined)}
+                    >
+                      {article.format ?? "—"}
+                    </span>
                   </div>
-                </td>
-                <td className="px-3 py-2 align-top text-sm text-rer-muted">
-                  {article.mutuelle ?? "—"}
                 </td>
                 <td className="px-3 py-2 align-top text-sm">
                   {article.etatLibelle ? (
                     <span
-                      className={getEtatBadgeClasses(
+                      className={`${getEtatBadgeClasses(
                         article.etatSlug ?? undefined
-                      )}
+                      )} whitespace-nowrap`}
                     >
                       {article.etatLibelle}
                     </span>
@@ -211,58 +341,79 @@ export function MesArticlesTable({
                   )}
                 </td>
                 <td className="px-3 py-2 align-top text-xs text-rer-muted">
-                  <div>{article.lastAction}</div>
+                  <div className="font-medium text-[11px] text-rer-text">
+                    {article.lastAction}
+                  </div>
                   {article.lastActionAt && (
-                    <div className="text-[11px]">
+                    <div className="text-[11px] text-rer-muted">
                       {new Date(article.lastActionAt).toLocaleString("fr-FR")}
                     </div>
                   )}
                 </td>
-                <td className="px-3 py-2 align-top text-xs text-rer-muted">
-                  {new Date(article.updatedAt).toLocaleString("fr-FR")}
-                </td>
                 <td className="px-3 py-2 align-top text-right text-xs">
                   <div className="inline-flex flex-col items-end gap-1">
-                    <Link
-                      href={`/articles/${article.id}`}
-                      className="text-xs font-medium text-rer-blue hover:text-rer-text"
-                    >
-                      Voir
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={() => openHistory(article.id)}
-                      className="text-xs font-medium text-rer-blue hover:text-rer-text"
-                    >
-                      Voir les modifications
-                    </button>
-                    {article.canEdit && (
-                      <Link
-                        href={`/articles/${article.id}/edit`}
-                        className="text-xs font-medium text-rer-blue hover:text-rer-text"
-                      >
-                        Continuer l&apos;édition
-                      </Link>
-                    )}
-                    {bulkMode && (
+                    {article.etatSlug === "brouillon" ? (
                       <button
                         type="button"
-                        onClick={() => toggleSelected(article.id)}
-                        className={`mt-1 inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] ${
-                          selectedIds.includes(article.id)
-                            ? "border-rer-blue bg-rer-blue text-white"
-                            : "border-rer-border bg-white text-rer-muted hover:bg-rer-app"
-                        }`}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          openPanelEdit(article.id);
+                        }}
+                        className="btn-action"
                       >
-                        {selectedIds.includes(article.id)
-                          ? "Sélectionné"
-                          : "Sélectionner"}
+                        Continuer le brouillon
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          openPanelView(article.id);
+                        }}
+                        className="btn-action"
+                      >
+                        Voir l&apos;article
                       </button>
                     )}
+                    {article.canEdit && article.etatSlug !== "brouillon" && (
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleEditClick(article);
+                        }}
+                        className="btn-action-text"
+                      >
+                        Modifier
+                      </button>
+                    )}
+                    {article.etatSlug === "a_relire" && (
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleDeleteOne(article);
+                        }}
+                        className="btn-action-danger"
+                      >
+                        Supprimer
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        openHistory(article.id);
+                      }}
+                      className="btn-action-text"
+                    >
+                      Historique
+                    </button>
                   </div>
                 </td>
-              </tr>
-            ))}
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -278,7 +429,7 @@ export function MesArticlesTable({
             type="button"
             onClick={() => goToPage(currentPage - 1)}
             disabled={currentPage <= 1}
-            className="rounded-full border border-rer-border bg-white px-3 py-1 text-xs font-medium text-rer-muted disabled:opacity-50 hover:bg-rer-app disabled:hover:bg-white"
+            className="rounded-lg border border-rer-border bg-white px-3 py-1.5 text-xs font-medium text-rer-muted disabled:opacity-50 hover:bg-rer-app disabled:hover:bg-white"
           >
             Précédent
           </button>
@@ -286,7 +437,7 @@ export function MesArticlesTable({
             type="button"
             onClick={() => goToPage(currentPage + 1)}
             disabled={currentPage >= totalPages}
-            className="rounded-full border border-rer-border bg-white px-3 py-1 text-xs font-medium text-rer-muted disabled:opacity-50 hover:bg-rer-app disabled:hover:bg-white"
+            className="rounded-lg border border-rer-border bg-white px-3 py-1.5 text-xs font-medium text-rer-muted disabled:opacity-50 hover:bg-rer-app disabled:hover:bg-white"
           >
             Suivant
           </button>
@@ -297,6 +448,14 @@ export function MesArticlesTable({
         articleId={historyArticleId}
         open={historyOpen}
         onClose={closeHistory}
+      />
+
+      <MesArticleSidePanel
+        articleId={selectedId}
+        mode={panelMode}
+        open={panelOpen}
+        onClose={closePanel}
+        onModeChange={setPanelMode}
       />
     </>
   );

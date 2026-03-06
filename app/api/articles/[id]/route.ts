@@ -190,9 +190,9 @@ export async function PATCH(
       try {
         const auteur = await prisma.auteur.findUnique({
           where: { id: article.auteurId },
-          include: { user: true },
+          select: { email: true },
         });
-        const email = (auteur as any)?.user?.email as string | undefined | null;
+        const email = auteur?.email ?? null;
         if (email) {
           ingestDebug({
             sessionId: "fb943b",

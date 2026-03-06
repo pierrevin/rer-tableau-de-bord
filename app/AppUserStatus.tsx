@@ -98,7 +98,7 @@ export function AppUserStatus() {
         <select
           defaultValue=""
           onChange={(event) => handleSwitchUser(event.target.value)}
-          className="hidden lg:inline-block rounded-full border border-rer-border bg-white px-2 py-0.5 text-[11px] text-rer-muted hover:bg-rer-app/60"
+          className="hidden lg:inline-block rounded-lg border border-rer-border bg-white px-2 py-0.5 text-[11px] text-rer-muted hover:bg-rer-app/60"
         >
           <option value="">
             Changer d&apos;utilisateur (bêta)
@@ -114,7 +114,7 @@ export function AppUserStatus() {
       <button
         type="button"
         onClick={() => signOut({ callbackUrl: "/" })}
-        className="rounded-full border border-rer-border bg-white px-2 py-0.5 text-[11px] font-medium text-rer-muted hover:bg-rer-app/60"
+        className="rounded-lg border border-rer-border bg-white px-2 py-0.5 text-[11px] font-medium text-rer-muted hover:bg-rer-app/60"
       >
         Se déconnecter
       </button>

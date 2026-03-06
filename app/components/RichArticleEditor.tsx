@@ -463,12 +463,6 @@ export function RichArticleEditor({
               return false;
             }
           }}
-          tippyOptions={{
-            placement: "left",
-            offset: [0, 8],
-            duration: 120,
-            maxWidth: "none",
-          }}
           className="flex items-center gap-1 rounded-full border border-rer-border bg-white px-2 py-1 text-[11px] text-rer-muted shadow-sm"
         >
           <button

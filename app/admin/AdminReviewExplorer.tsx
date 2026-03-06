@@ -350,7 +350,7 @@ function AdminArticlePanel({
           <button
             type="button"
             onClick={handleDelete}
-            className="inline-flex items-center rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-100"
+            className="inline-flex items-center rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-100"
           >
             Supprimer
           </button>
@@ -358,7 +358,7 @@ function AdminArticlePanel({
             <button
               type="button"
               onClick={() => setShowDiff((v) => !v)}
-              className="inline-flex items-center rounded-full border border-rer-border bg-white px-3 py-1.5 text-xs font-medium text-rer-text hover:bg-rer-app"
+              className="btn-action"
             >
               {showDiff ? "Masquer les modifications" : "Afficher les modifications"}
             </button>
@@ -376,11 +376,7 @@ function AdminArticlePanel({
               type="button"
               disabled={updatingEtat}
               onClick={() => handleChangeEtat(etat.id)}
-              className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-medium ${
-                isActive
-                  ? "bg-rer-blue text-white"
-                  : "bg-rer-app text-rer-text hover:bg-white hover:ring-1 hover:ring-rer-border"
-              }`}
+              className={`chip-filter ${isActive ? "chip-filter--active" : ""}`}
             >
               {etat.libelle}
             </button>
@@ -480,7 +476,7 @@ function AdminArticlePanel({
           />
 
           {showDiff && originalSnapshotRef.current && (
-            <div className="space-y-2 rounded-md border border-dashed border-rer-border bg-rer-app/40 p-3 text-xs">
+            <div className="space-y-2 rounded-lg border border-dashed border-rer-border bg-rer-app/40 p-3 text-xs">
               <p className="mb-1 font-semibold text-rer-muted">
                 Modifications par rapport à la version de référence
               </p>
@@ -554,7 +550,7 @@ function AdminArticlePanel({
             </div>
           )}
 
-          <div className="space-y-1 rounded-md bg-rer-app p-2 text-xs">
+          <div className="space-y-1 rounded-lg bg-rer-app p-2 text-xs">
             <p className="font-semibold text-rer-muted">
               Historique des états
             </p>
@@ -893,11 +889,7 @@ export function AdminReviewExplorer({
         <button
           type="button"
           onClick={() => handleEtatFilterClick(null)}
-          className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-medium ${
-            !etatSlug
-              ? "bg-rer-blue text-white"
-              : "bg-white text-rer-text ring-1 ring-rer-border hover:bg-rer-app"
-          }`}
+          className={`chip-filter ${!etatSlug ? "chip-filter--active" : ""}`}
         >
           Tous
         </button>
@@ -906,11 +898,7 @@ export function AdminReviewExplorer({
             key={etat.id}
             type="button"
             onClick={() => handleEtatFilterClick(etat.slug)}
-            className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-medium ${
-              etat.slug === etatSlug
-                ? "bg-rer-blue text-white"
-                : "bg-white text-rer-text ring-1 ring-rer-border hover:bg-rer-app"
-            }`}
+            className={`chip-filter ${etat.slug === etatSlug ? "chip-filter--active" : ""}`}
           >
             {etat.libelle}
           </button>
@@ -918,7 +906,7 @@ export function AdminReviewExplorer({
         <button
           type="button"
           onClick={() => handleEtatFilterClick("a_relire")}
-          className="inline-flex items-center rounded-full px-3 py-1 text-[11px] font-medium bg-rer-app text-rer-text hover:bg-white hover:ring-1 hover:ring-rer-border"
+          className="chip-filter"
         >
           À relire
         </button>
@@ -947,7 +935,7 @@ export function AdminReviewExplorer({
                       setBulkMode(true);
                     }
                   }}
-                  className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-medium ${
+                  className={`inline-flex items-center rounded-lg border px-3 py-1.5 text-[11px] font-medium ${
                     bulkMode
                       ? "border-rer-blue bg-rer-blue text-white"
                       : "border-rer-border bg-white text-rer-text hover:bg-rer-app"
@@ -967,13 +955,13 @@ export function AdminReviewExplorer({
             <button
               type="button"
               onClick={() => setListCollapsed((v) => !v)}
-              className="inline-flex items-center rounded-full border border-rer-border bg-white px-2 py-1 text-[10px] font-medium text-rer-text hover:bg-rer-app"
+              className="inline-flex items-center rounded-lg border border-rer-border bg-white px-2 py-1 text-[10px] font-medium text-rer-text hover:bg-rer-app"
             >
               {listCollapsed ? "▶ Liste" : "◀ Liste"}
             </button>
           </div>
           {!listCollapsed && visibleArticles.length === 0 ? (
-            <p className="rounded-md bg-white px-3 py-6 text-center text-sm text-rer-muted shadow-sm ring-1 ring-rer-border">
+            <p className="rounded-lg bg-white px-3 py-6 text-center text-sm text-rer-muted shadow-sm ring-1 ring-rer-border">
               Aucun article ne correspond à ces critères. Essayez d&apos;élargir
               votre recherche ou de modifier les filtres.
             </p>
@@ -1043,7 +1031,7 @@ export function AdminReviewExplorer({
                     <div className="flex flex-col items-end gap-1 text-[10px] text-rer-subtle">
                       <span>{ageLabel}</span>
                       {bulkMode && isBulkSelected && (
-                        <span className="mt-0.5 rounded-full bg-rer-blue/10 px-2 py-0.5 text-[10px] text-rer-blue">
+                        <span className="mt-0.5 rounded-lg bg-rer-blue/10 px-2 py-0.5 text-[10px] text-rer-blue">
                           Sélectionné
                         </span>
                       )}

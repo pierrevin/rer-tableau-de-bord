@@ -63,7 +63,7 @@ export function MesArticlesFiltersBar({
           <select
             value={currentEtatSlug}
             onChange={(event) => handleChange("etat", event.target.value)}
-            className="h-7 rounded-md border border-rer-border bg-white px-2 text-xs text-rer-text focus:border-rer-blue focus:outline-none focus:ring-1 focus:ring-rer-blue"
+            className="h-7 rounded-lg border border-rer-border bg-white px-2 text-xs text-rer-text focus:border-rer-blue focus:outline-none focus:ring-1 focus:ring-rer-blue"
           >
             <option value="">Tous les états</option>
             {etats.map((etat) => (
@@ -81,7 +81,7 @@ export function MesArticlesFiltersBar({
           <select
             value={currentSort}
             onChange={(event) => handleChange("sort", event.target.value)}
-            className="h-7 rounded-md border border-rer-border bg-white px-2 text-xs text-rer-text focus:border-rer-blue focus:outline-none focus:ring-1 focus:ring-rer-blue"
+            className="h-7 rounded-lg border border-rer-border bg-white px-2 text-xs text-rer-text focus:border-rer-blue focus:outline-none focus:ring-1 focus:ring-rer-blue"
           >
             <option value="lastModifiedDesc">Dernière modification (récent d&apos;abord)</option>
             <option value="lastModifiedAsc">Dernière modification (ancien d&apos;abord)</option>

@@ -21,6 +21,7 @@ type SearchParams = {
   article?: string;
   view?: string;
   mine?: string;
+  back?: string;
 };
 
 type PageProps = {
@@ -50,6 +51,7 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
   const toParam = searchParams?.to || "";
   const selectedArticleId = searchParams?.article || "";
   const mineParam = searchParams?.mine === "1" ? "1" : "";
+  const backParam = searchParams?.back || "";
   const rawView = searchParams?.view;
   const view: "cards" | "explorer" | "table" =
     rawView === "table" || rawView === "cards" || rawView === "explorer"
@@ -84,13 +86,16 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
   }
 
   const createdAtFilter: any = {};
-  if (fromParam) {
-    createdAtFilter.gte = new Date(fromParam);
-  } else if (sinceParam) {
-    createdAtFilter.gte = new Date(sinceParam);
+  const fromDate = fromParam ? new Date(fromParam) : null;
+  const sinceDate = sinceParam ? new Date(sinceParam) : null;
+  const toDate = toParam ? new Date(toParam) : null;
+  if (fromDate && !Number.isNaN(fromDate.getTime())) {
+    createdAtFilter.gte = fromDate;
+  } else if (sinceDate && !Number.isNaN(sinceDate.getTime())) {
+    createdAtFilter.gte = sinceDate;
   }
-  if (toParam) {
-    createdAtFilter.lte = new Date(toParam);
+  if (toDate && !Number.isNaN(toDate.getTime())) {
+    createdAtFilter.lte = toDate;
   }
   if (Object.keys(createdAtFilter).length > 0) {
     where.createdAt = createdAtFilter;
@@ -215,10 +220,11 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
               rubriqueId={rubriqueParam}
               formatId={formatParam}
               mine={mineParam}
+              back={backParam}
               since={sinceParam}
               from={fromParam}
               to={toParam}
-              showEtat={showEtat}
+              showEtat={false}
               initialSelectedId={selectedArticleId || undefined}
             />
           ) : (
@@ -243,9 +249,9 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
         {/* Bouton flottant mobile pour déposer un article */}
         <Link
           href="/articles/depot"
-          className="fixed bottom-6 right-6 z-30 inline-flex items-center gap-2 rounded-full bg-rer-orange px-4 py-2 text-sm font-semibold text-white shadow-lg hover:bg-[#e25730] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rer-orange focus-visible:ring-offset-2 focus-visible:ring-offset-rer-app lg:hidden"
+          className="btn-cta fixed bottom-6 right-6 z-30 lg:hidden"
         >
-          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/10 text-base leading-none">
+          <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-white/10 text-base leading-none">
             +
           </span>
           <span>Nouvel article</span>

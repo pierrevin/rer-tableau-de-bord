@@ -396,7 +396,7 @@ export default function DepotPage() {
               type="button"
               onClick={handleImportWord}
               disabled={importing}
-              className="rounded-full border border-rer-border bg-white px-3 py-1 text-[11px] font-medium text-rer-blue hover:bg-rer-app disabled:opacity-50"
+              className="btn-action disabled:opacity-50"
             >
               {importing ? "Import Word…" : "Importer un Word"}
             </button>
@@ -404,7 +404,7 @@ export default function DepotPage() {
               <button
                 type="button"
                 onClick={handleIgnoreDraft}
-                className="inline-flex items-center rounded-full border border-red-200 bg-red-50 px-3 py-1 text-[11px] font-medium text-red-600 hover:bg-red-100"
+                className="inline-flex items-center rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-[11px] font-medium text-red-600 hover:bg-red-100"
               >
                 Ignorer ce brouillon
               </button>
@@ -448,7 +448,7 @@ export default function DepotPage() {
           <button
             type="submit"
             disabled={submitStatus === "sending"}
-            className="rounded-full bg-blue-600 px-5 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            className="rounded-lg bg-rer-blue px-5 py-2 text-sm font-medium text-white hover:bg-[#1e3380] disabled:opacity-50"
           >
             {submitStatus === "sending" ? "Envoi…" : "Créer l’article"}
           </button>

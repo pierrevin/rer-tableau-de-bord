@@ -2,6 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ==========================================================================
+   Design system — arrondis, labels, filtres, boutons
+   - Arrondi standard : rounded-lg (badges, chips, boutons secondaires).
+   - Badges lecture : getRubriqueBadgeClasses (plein), getFormatBadgeClasses (outline),
+     getEtatBadgeClasses (sémantique) — dans ArticlesCardsExplorer.
+   - Filtres : .chip-filter (inactif), .chip-filter--active (actif = bleu RER).
+   - Boutons : .btn-action (outline), .btn-action-text (lien), .btn-action-danger,
+     .btn-cta (CTA principal orange).
+   ========================================================================== */
+
 html,
 body {
   min-height: 100%;
@@ -48,7 +58,7 @@ td {
 }
 
 .prose img.article-image {
-  @apply my-4 w-full h-auto max-h-96 object-cover rounded-md border border-rer-border bg-rer-app;
+  @apply my-4 w-full h-auto max-h-96 object-cover rounded-lg border border-rer-border bg-rer-app;
 }
 
 .prose p.image-caption {
@@ -69,10 +79,34 @@ td {
 }
 
 .prose section.social-post {
-  @apply my-4 rounded-md border border-rer-border bg-rer-app px-3 py-3 text-sm text-rer-text;
+  @apply my-4 rounded-lg border border-rer-border bg-rer-app px-3 py-3 text-sm text-rer-text;
 }
 
 .prose .social-post-label {
   @apply mb-1 text-[11px] font-semibold uppercase tracking-wide text-rer-muted;
+}
+
+/* Chips de filtre — sélection Mutuelles / Rubriques / Formats / Dates */
+.chip-filter {
+  @apply inline-flex items-center rounded-lg border border-rer-border bg-white px-2 py-0.5 text-xs font-medium text-rer-text transition hover:bg-rer-app;
+}
+.chip-filter--active {
+  @apply border-transparent bg-rer-blue text-white hover:bg-rer-blue;
+}
+
+/* Boutons d’action (tables, panneaux) — design uniforme */
+.btn-action {
+  @apply inline-flex items-center rounded-lg border border-rer-border bg-white px-3 py-1.5 text-[11px] font-medium text-rer-blue hover:bg-rer-app;
+}
+.btn-action-text {
+  @apply text-[11px] font-medium text-rer-blue hover:text-rer-text;
+}
+.btn-action-danger {
+  @apply text-[11px] font-medium text-red-600 hover:text-red-700;
+}
+
+/* CTA principal (ex. Nouvel article) — orange, avec ou sans icône */
+.btn-cta {
+  @apply inline-flex items-center gap-2 rounded-lg bg-rer-orange px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#e25730] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rer-orange focus-visible:ring-offset-2 focus-visible:ring-offset-rer-app;
 }
 

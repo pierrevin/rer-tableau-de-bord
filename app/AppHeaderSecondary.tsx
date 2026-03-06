@@ -23,9 +23,9 @@ export function AppHeaderSecondary() {
       </div>
       <Link
         href="/articles/depot"
-        className="hidden items-center gap-2 rounded-full bg-rer-orange px-4 py-2 text-sm font-semibold text-white shadow-lg hover:bg-[#e25730] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rer-orange focus-visible:ring-offset-2 focus-visible:ring-offset-rer-app lg:inline-flex"
+        className="btn-cta hidden lg:inline-flex"
       >
-        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/10 text-base leading-none">
+        <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-white/10 text-base leading-none">
           +
         </span>
         <span>Nouvel article</span>

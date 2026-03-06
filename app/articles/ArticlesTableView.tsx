@@ -1,7 +1,11 @@
  "use client";
 
-import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { ArticleReadSidePanel } from "@/app/articles/ArticleReadSidePanel";
+import {
+  getFormatBadgeClasses,
+  getRubriqueBadgeClasses,
+} from "@/app/articles/ArticlesCardsExplorer";
 
 type ArticleSummary = {
   id: string;
@@ -53,8 +57,19 @@ export function ArticlesTableView({
   const [articles, setArticles] = useState<ArticleSummary[]>(initialArticles);
   const [hasMore, setHasMore] = useState(initialArticles.length < total);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [selectedArticleId, setSelectedArticleId] = useState<string | null>(null);
+  const [panelOpen, setPanelOpen] = useState(false);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const currentPageRef = useRef(initialPage);
+
+  const openArticlePanel = (id: string) => {
+    setSelectedArticleId(id);
+    setPanelOpen(true);
+  };
+  const closeArticlePanel = () => {
+    setPanelOpen(false);
+    setSelectedArticleId(null);
+  };
 
   // Réinitialiser la liste et la pagination quand les filtres / la recherche changent
   useEffect(() => {
@@ -192,7 +207,7 @@ export function ArticlesTableView({
               <tr key={article.id} className="hover:bg-rer-app">
                 <td className="px-3 py-2 align-top">
                   {article.lienPhoto ? (
-                    <div className="h-14 w-14 overflow-hidden rounded-md border border-rer-border bg-rer-app">
+                    <div className="h-14 w-14 overflow-hidden rounded-lg border border-rer-border bg-rer-app">
                       <img
                         src={article.lienPhoto}
                         alt={article.legendePhoto || article.titre}
@@ -201,16 +216,17 @@ export function ArticlesTableView({
                       />
                     </div>
                   ) : (
-                    <div className="h-14 w-14 rounded-md border border-dashed border-rer-border bg-rer-app" />
+                    <div className="h-14 w-14 rounded-lg border border-dashed border-rer-border bg-rer-app" />
                   )}
                 </td>
                 <td className="px-3 py-2 align-top text-sm text-rer-text">
-                  <Link
-                    href={`/articles/${article.id}`}
-                    className="font-semibold text-rer-blue hover:underline"
+                  <button
+                    type="button"
+                    onClick={() => openArticlePanel(article.id)}
+                    className="font-semibold text-left text-rer-blue hover:underline"
                   >
                     {article.titre}
-                  </Link>
+                  </button>
                   {article.chapo && (
                     <p className="mt-0.5 line-clamp-2 text-xs text-rer-muted">
                       {article.chapo}
@@ -225,11 +241,29 @@ export function ArticlesTableView({
                 <td className="px-3 py-2 text-sm text-rer-muted">
                   {article.mutuelle?.nom || "—"}
                 </td>
-                <td className="px-3 py-2 text-sm text-rer-muted">
-                  {article.rubrique?.libelle || "—"}
+                <td className="px-3 py-2 text-sm">
+                  {article.rubrique?.libelle ? (
+                    <span
+                      className={getRubriqueBadgeClasses(
+                        article.rubrique.libelle
+                      )}
+                    >
+                      {article.rubrique.libelle}
+                    </span>
+                  ) : (
+                    "—"
+                  )}
                 </td>
-                <td className="px-3 py-2 text-sm text-rer-muted">
-                  {article.format?.libelle || "—"}
+                <td className="px-3 py-2 text-sm">
+                  {article.format?.libelle ? (
+                    <span
+                      className={getFormatBadgeClasses(article.format.libelle)}
+                    >
+                      {article.format.libelle}
+                    </span>
+                  ) : (
+                    "—"
+                  )}
                 </td>
                 <td className="px-3 py-2 text-sm text-rer-muted">
                 {(() => {
@@ -246,20 +280,13 @@ export function ArticlesTableView({
                   {article.etat?.libelle || "—"}
                 </td>
                 <td className="px-3 py-2 text-right text-sm">
-                  <div className="inline-flex items-center gap-2">
-                    <Link
-                      href={`/articles/${article.id}`}
-                      className="text-xs font-medium text-rer-blue hover:text-rer-text"
-                    >
-                      Voir
-                    </Link>
-                    <Link
-                      href={`/articles/${article.id}/edit`}
-                      className="text-xs font-medium text-rer-blue hover:text-rer-text"
-                    >
-                      Corriger
-                    </Link>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => openArticlePanel(article.id)}
+                    className="btn-action"
+                  >
+                    Voir
+                  </button>
                 </td>
               </tr>
             ))}
@@ -279,6 +306,13 @@ export function ArticlesTableView({
           </p>
         )}
       </div>
+
+      <ArticleReadSidePanel
+        articleId={selectedArticleId}
+        open={panelOpen}
+        onClose={closeArticlePanel}
+        backParam="articles"
+      />
     </>
   );
 }
