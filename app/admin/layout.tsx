@@ -1,7 +1,15 @@
 import type { ReactNode } from "react";
+import { redirect } from "next/navigation";
+import { getSessionUser, canEditArticles } from "@/lib/auth";
 import { RelecteursSidebar } from "../relecteurs/RelecteursSidebar";
 
-export default function AdminLayout({ children }: { children: ReactNode }) {
+export default async function AdminLayout({ children }: { children: ReactNode }) {
+  const user = await getSessionUser();
+  if (!user || !canEditArticles(user.role)) {
+    // Auteurs / lecteurs : pas d’accès à l’espace admin
+    redirect("/articles");
+  }
+
   return (
     <div className="flex min-h-screen bg-rer-app">
       <RelecteursSidebar />

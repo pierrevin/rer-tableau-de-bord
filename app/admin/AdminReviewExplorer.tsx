@@ -41,6 +41,8 @@ type ArticleDetail = {
   contenuJson?: unknown | null;
   auteurId: string;
   mutuelleId: string | null;
+  rubriqueId?: string | null;
+  formatId?: string | null;
   lienPhoto: string | null;
   legendePhoto: string | null;
   postRs: string | null;
@@ -95,6 +97,7 @@ function AdminArticlePanel({
   error,
   etats,
   onEtatUpdated,
+  onDetailUpdated,
   listCollapsed,
   onToggleListCollapsed,
 }: {
@@ -105,6 +108,7 @@ function AdminArticlePanel({
   error: string | null;
   etats: Etat[];
   onEtatUpdated: (etatSlug: string | null) => void;
+  onDetailUpdated?: (article: ArticleDetail) => void;
   listCollapsed: boolean;
   onToggleListCollapsed: () => void;
 }) {
@@ -112,6 +116,9 @@ function AdminArticlePanel({
   const [updatingEtat, setUpdatingEtat] = useState(false);
   const [savingContent, setSavingContent] = useState(false);
   const [savingMeta, setSavingMeta] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [titleDraft, setTitleDraft] = useState("");
   const [postRsDraft, setPostRsDraft] = useState("");
   const [auteursOptions, setAuteursOptions] = useState<AuteurOption[]>([]);
@@ -125,6 +132,7 @@ function AdminArticlePanel({
       setTitleDraft(detail.titre);
       setPostRsDraft(detail.postRs ?? "");
       setAuteurIdDraft(detail.auteurId ?? null);
+      setLastSavedAt(new Date());
       if (!originalSnapshotRef.current) {
         originalSnapshotRef.current = detail;
       }
@@ -166,6 +174,10 @@ function AdminArticlePanel({
         setRef(null);
       });
   }, []);
+
+  const touchLastSaved = () => {
+    setLastSavedAt(new Date());
+  };
 
   const handleChangeEtat = async (targetEtatId: string) => {
     if (!detail || updatingEtat) return;
@@ -247,6 +259,7 @@ function AdminArticlePanel({
         body: JSON.stringify({ titre: nextTitle }),
       });
       if (res.ok) {
+        touchLastSaved();
         router.refresh();
       }
     } finally {
@@ -266,6 +279,7 @@ function AdminArticlePanel({
         body: JSON.stringify({ postRs: next || null }),
       });
       if (res.ok) {
+        touchLastSaved();
         router.refresh();
       }
     } finally {
@@ -285,6 +299,7 @@ function AdminArticlePanel({
         body: JSON.stringify({ auteurId: newAuteurId }),
       });
       if (res.ok) {
+        touchLastSaved();
         router.refresh();
       }
     } finally {
@@ -294,6 +309,8 @@ function AdminArticlePanel({
 
   const performMainImageUpload = async (file: File) => {
     if (!detail) return;
+    setUploadingImage(true);
+    setUploadError(null);
     try {
       const { uploadArticleImage } = await import("@/lib/uploadArticleImage");
       const { publicUrl } = await uploadArticleImage({
@@ -308,11 +325,18 @@ function AdminArticlePanel({
       });
       if (!res.ok) {
         console.error("Erreur lors de la mise à jour de l’image principale");
+        setUploadError("Erreur lors de la mise à jour de l’image principale");
       } else {
+        const updated = (await res.json()) as ArticleDetail;
+        onDetailUpdated?.(updated);
+        touchLastSaved();
         router.refresh();
       }
     } catch (e) {
       console.error("Erreur lors de l’upload de l’image principale", e);
+      setUploadError("Erreur lors de l’upload de l’image principale");
+    } finally {
+      setUploadingImage(false);
     }
   };
 
@@ -338,50 +362,86 @@ function AdminArticlePanel({
     }
   };
 
+  const currentEtatId = detail?.etat
+    ? etats.find((e) => e.slug === detail.etat?.slug)?.id ?? ""
+    : "";
+
+  const getEtatSelectStyle = (slug: string | null): React.CSSProperties => {
+    switch (slug) {
+      case "a_relire":
+        return { borderColor: "rgba(250,204,21,0.6)", backgroundColor: "#FEF9C3", color: "#854D0E" };
+      case "corrige":
+        return { borderColor: "#BFDBFE", backgroundColor: "#EFF6FF", color: "#1D4ED8" };
+      case "valide":
+        return { borderColor: "transparent", backgroundColor: "#D1FAE5", color: "#047857" };
+      case "publie":
+        return { borderColor: "#22C55E", backgroundColor: "#16A34A", color: "#fff" };
+      default:
+        return {};
+    }
+  };
+
   return (
     <div className="flex h-full flex-col">
-      <div className="mb-3 flex items-start justify-between gap-3 border-b border-rer-border pb-3">
-        <div className="flex-1 min-w-0 space-y-1">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-rer-muted">
-            Mode relecture
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 text-xs">
+      {/* Barre unique : Liste + État + Supprimer + Afficher modifs + Enregistré */}
+      <div className="admin-action-bar mb-3 flex flex-wrap items-center gap-2 border-b border-rer-border pb-3">
+        <button
+          type="button"
+          onClick={onToggleListCollapsed}
+          className="inline-flex h-9 min-h-9 items-center gap-1 rounded-lg border border-rer-border bg-white px-3 py-2 text-[11px] font-medium text-rer-text hover:bg-rer-app"
+          aria-label={listCollapsed ? "Afficher la liste" : "Replier la liste"}
+        >
+          {listCollapsed ? "\u25B6\u00A0Liste" : "\u25C0\u00A0Liste"}
+        </button>
+        {detail && (
+          <label className="inline-flex h-9 min-h-9 items-center gap-2 text-[11px] text-rer-muted">
+            <span>État :</span>
+            <select
+              value={currentEtatId}
+              disabled={updatingEtat}
+              onChange={(e) => {
+                const id = e.target.value;
+                if (id) handleChangeEtat(id);
+              }}
+              className="select-action min-w-[140px]"
+              style={getEtatSelectStyle(currentSlug)}
+            >
+              {sortedEtats.map((etat) => (
+                <option key={etat.id} value={etat.id}>
+                  {etat.libelle}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        <button
+          type="button"
+          onClick={handleDelete}
+          className="inline-flex h-9 min-h-9 items-center rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[11px] font-medium text-red-600 hover:bg-red-100"
+        >
+          Supprimer
+        </button>
+        {detail && (
           <button
             type="button"
-            onClick={handleDelete}
-            className="inline-flex items-center rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-100"
+            onClick={() => setShowDiff((v) => !v)}
+            className="btn-action inline-flex h-9 min-h-9 items-center rounded-lg px-3 py-2"
           >
-            Supprimer
+            {showDiff ? "Masquer les modifications" : "Afficher les modifications"}
           </button>
-          {detail && (
-            <button
-              type="button"
-              onClick={() => setShowDiff((v) => !v)}
-              className="btn-action"
-            >
-              {showDiff ? "Masquer les modifications" : "Afficher les modifications"}
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Timeline des états */}
-      <div className="mb-3 flex flex-wrap items-center gap-2 text-xs">
-        {sortedEtats.map((etat) => {
-          const isActive = etat.slug === currentSlug;
-          return (
-            <button
-              key={etat.id}
-              type="button"
-              disabled={updatingEtat}
-              onClick={() => handleChangeEtat(etat.id)}
-              className={`chip-filter ${isActive ? "chip-filter--active" : ""}`}
-            >
-              {etat.libelle}
-            </button>
-          );
-        })}
+        )}
+        {detail && (
+          <span className="ml-auto text-[11px] text-rer-muted">
+            {savingContent
+              ? "Enregistrement…"
+              : lastSavedAt
+              ? `Enregistré à ${lastSavedAt.toLocaleTimeString("fr-FR", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}`
+              : "Enregistré"}
+          </span>
+        )}
       </div>
 
       {loading && (
@@ -393,14 +453,11 @@ function AdminArticlePanel({
 
       {!loading && !error && detail && ref && (
         <div className="mt-2 flex-1 space-y-4 overflow-y-auto pr-1 text-sm text-rer-text">
-          <div className="flex items-center justify-end text-[11px] text-rer-muted">
-            {savingContent ? "Enregistrement…" : "Enregistré"}
-          </div>
           <ArticleEditorCard
             mode="edit"
             value={{
-              formatId: (detail as any).formatId ?? "",
-              rubriqueId: (detail as any).rubriqueId ?? "",
+              formatId: detail.formatId ?? "",
+              rubriqueId: detail.rubriqueId ?? "",
               auteurId: detail.auteurId,
               mutuelleId: detail.mutuelleId ?? undefined,
               lienPhoto: detail.lienPhoto,
@@ -412,6 +469,8 @@ function AdminArticlePanel({
               postRs: postRsDraft,
             }}
             referentiels={ref}
+            uploadingImage={uploadingImage}
+            uploadError={uploadError}
             onChange={async (patch: Partial<ArticleEditorValue>) => {
               const payload: Record<string, any> = {};
               if (patch.titre !== undefined) {
@@ -464,6 +523,8 @@ function AdminArticlePanel({
                 if (!res.ok) {
                   console.error("Erreur lors de la sauvegarde de l’article");
                 } else {
+                  const updated = (await res.json()) as ArticleDetail;
+                  onDetailUpdated?.(updated);
                   router.refresh();
                 }
               } catch (e) {
@@ -710,17 +771,36 @@ export function AdminReviewExplorer({
     setError(null);
 
     fetch(`/api/articles/${selectedId}`)
-      .then((res) => {
-        if (!res.ok) return null;
-        return res.json();
+      .then(async (res) => {
+        const data = await res.json().catch(() => null);
+        if (!res.ok) {
+          const msg =
+            (data && typeof data.error === "string" && data.error) ||
+            (res.status === 404 ? "Article introuvable." : "Erreur de chargement.");
+          return { error: msg };
+        }
+        if (data && typeof data === "object" && "id" in data) return { detail: data as ArticleDetail };
+        return { error: "Réponse invalide." };
       })
-      .then((data: ArticleDetail | null) => {
+      .then((result: { detail?: ArticleDetail; error?: string } | null) => {
         if (cancelled) return;
-        if (!data) {
+        if (!result) {
           setDetail(null);
-          setError("Article introuvable ou erreur de chargement.");
-        } else {
-          setDetail(data);
+          setError("Erreur de chargement.");
+          return;
+        }
+        if ("error" in result && result.error) {
+          setDetail(null);
+          setError(result.error);
+          setSelectedId((prev) => {
+            if (!prev || visibleArticles.some((a) => a.id === prev)) return prev;
+            return visibleArticles[0]?.id ?? null;
+          });
+          return;
+        }
+        if ("detail" in result && result.detail) {
+          setDetail(result.detail);
+          setError(null);
         }
       })
       .catch(() => {
@@ -920,11 +1000,15 @@ export function AdminReviewExplorer({
         }`}
       >
         <div
-          className="max-h-[calc(100vh-140px)] space-y-2 overflow-y-auto px-2 py-2 transition-all"
+          className={`max-h-[calc(100vh-140px)] space-y-2 overflow-y-auto px-2 py-2 transition-all ${
+            listCollapsed
+              ? "flex min-w-[64px] flex-col items-center gap-2 rounded-lg border border-rer-border bg-rer-app/30"
+              : ""
+          }`}
         >
-          <div className="mb-2 flex items-center justify-between text-[11px] text-rer-muted">
+          <div className="mb-2 flex items-center gap-2 text-[11px] text-rer-muted">
             {!listCollapsed && (
-              <div className="flex items-center gap-2">
+              <>
                 <button
                   type="button"
                   onClick={() => {
@@ -935,11 +1019,7 @@ export function AdminReviewExplorer({
                       setBulkMode(true);
                     }
                   }}
-                  className={`inline-flex items-center rounded-lg border px-3 py-1.5 text-[11px] font-medium ${
-                    bulkMode
-                      ? "border-rer-blue bg-rer-blue text-white"
-                      : "border-rer-border bg-white text-rer-text hover:bg-rer-app"
-                  }`}
+                  className={`btn-action-text ${bulkMode ? "font-semibold text-rer-blue" : ""}`}
                 >
                   Sélection multiple
                 </button>
@@ -950,22 +1030,29 @@ export function AdminReviewExplorer({
                       : "Cliquez sur un article pour le sélectionner"}
                   </span>
                 )}
-              </div>
+              </>
             )}
-            <button
-              type="button"
-              onClick={() => setListCollapsed((v) => !v)}
-              className="inline-flex items-center rounded-lg border border-rer-border bg-white px-2 py-1 text-[10px] font-medium text-rer-text hover:bg-rer-app"
-            >
-              {listCollapsed ? "▶ Liste" : "◀ Liste"}
-            </button>
           </div>
-          {!listCollapsed && visibleArticles.length === 0 ? (
+          {listCollapsed ? (
+            <div className="flex flex-col items-center justify-center gap-1 py-4 text-center">
+              <p className="text-[11px] font-medium text-rer-muted">Liste repliée</p>
+              <p className="text-[10px] text-rer-subtle">
+                {visibleArticles.length} article{visibleArticles.length !== 1 ? "s" : ""}
+              </p>
+              <button
+                type="button"
+                onClick={() => setListCollapsed(false)}
+                className="mt-2 text-[11px] text-rer-blue hover:underline"
+              >
+                Ouvrir la liste
+              </button>
+            </div>
+          ) : visibleArticles.length === 0 ? (
             <p className="rounded-lg bg-white px-3 py-6 text-center text-sm text-rer-muted shadow-sm ring-1 ring-rer-border">
               Aucun article ne correspond à ces critères. Essayez d&apos;élargir
               votre recherche ou de modifier les filtres.
             </p>
-          ) : !listCollapsed ? (
+          ) : (
             <>
               {visibleArticles.map((article) => {
                 const isSelected = article.id === selectedId;
@@ -991,7 +1078,7 @@ export function AdminReviewExplorer({
                         : handleSelect(article.id)
                     }
                     aria-pressed={isSelected}
-                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-xs transition-colors ${
+                    className={`flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left text-xs transition-colors ${
                       isSelected && !bulkMode
                         ? "bg-rer-blue/5 ring-1 ring-rer-blue"
                         : "bg-white hover:bg-rer-app hover:ring-1 hover:ring-rer-border"
@@ -999,7 +1086,7 @@ export function AdminReviewExplorer({
                   >
                     {bulkMode && (
                       <span
-                        className={`h-2.5 w-2.5 rounded-full border ${
+                        className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full border ${
                           isBulkSelected
                             ? "border-rer-blue bg-rer-blue"
                             : "border-rer-border bg-white"
@@ -1007,31 +1094,49 @@ export function AdminReviewExplorer({
                       />
                     )}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        {article.etat && (
-                          <span
-                            className={`${getEtatBadgeClasses(
-                              article.etat.slug,
-                              false
-                            )} whitespace-nowrap`}
-                          >
-                            {article.etat.libelle}
-                          </span>
-                        )}
-                        <p className="truncate text-sm font-semibold text-rer-text">
-                          {article.titre}
-                        </p>
+                      {/* Ligne 1 : badge + titre à gauche, date à droite */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex min-w-0 flex-wrap items-center gap-2">
+                          {article.etat && (
+                            <span
+                              className={`${getEtatBadgeClasses(
+                                article.etat.slug,
+                                false
+                              )} shrink-0 whitespace-nowrap`}
+                            >
+                              {article.etat.libelle}
+                            </span>
+                          )}
+                          <p className="line-clamp-2 text-sm font-semibold text-rer-text">
+                            {article.titre}
+                          </p>
+                        </div>
+                        <span className="shrink-0 text-[10px] text-rer-subtle">
+                          {ageLabel}
+                        </span>
                       </div>
-                      <p className="mt-0.5 line-clamp-1 text-[11px] text-rer-muted">
-                        {article.mutuelle?.nom}
-                        {article.rubrique && ` · ${article.rubrique.libelle}`}
-                        {article.format && ` · ${article.format.libelle}`}
+                      {article.chapo && (
+                        <p className="mt-0.5 line-clamp-1 text-[11px] text-rer-muted">
+                          {article.chapo}
+                        </p>
+                      )}
+                      <p className="mt-1 flex items-center gap-1 text-[10px] text-rer-subtle">
+                        <span
+                          className="h-[3px] w-[3px] rounded-full bg-rer-subtle"
+                          aria-hidden="true"
+                        />
+                        <span className="line-clamp-1">
+                          {[
+                            article.auteur && `${article.auteur.prenom} ${article.auteur.nom}`,
+                            article.rubrique?.libelle,
+                            article.format?.libelle,
+                          ]
+                            .filter(Boolean)
+                            .join(" · ") || "—"}
+                        </span>
                       </p>
-                    </div>
-                    <div className="flex flex-col items-end gap-1 text-[10px] text-rer-subtle">
-                      <span>{ageLabel}</span>
                       {bulkMode && isBulkSelected && (
-                        <span className="mt-0.5 rounded-lg bg-rer-blue/10 px-2 py-0.5 text-[10px] text-rer-blue">
+                        <span className="mt-0.5 inline-block rounded-lg bg-rer-blue/10 px-2 py-0.5 text-[10px] text-rer-blue">
                           Sélectionné
                         </span>
                       )}
@@ -1041,10 +1146,10 @@ export function AdminReviewExplorer({
               })}
               <div ref={sentinelRef} className="h-6 lg:h-8" />
             </>
-          ) : null}
+          )}
         </div>
 
-        <div className="hidden min-h-[260px] flex-col rounded-xl bg-white p-4 shadow-sm ring-1 ring-rer-border lg:flex">
+        <div className="hidden min-h-[260px] min-w-0 flex-col rounded-xl bg-white p-4 shadow-sm ring-1 ring-rer-border lg:flex lg:min-w-[420px]">
           {!selectedId && (
             <p className="text-sm text-rer-muted">
               Sélectionnez un article dans la file pour le relire.
@@ -1060,6 +1165,7 @@ export function AdminReviewExplorer({
               error={error}
               etats={etats}
               onEtatUpdated={handleEtatUpdated}
+              onDetailUpdated={setDetail}
               listCollapsed={listCollapsed}
               onToggleListCollapsed={() => setListCollapsed((v) => !v)}
             />

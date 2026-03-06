@@ -130,6 +130,9 @@ export function MesArticleSidePanel({
   const [savingContent, setSavingContent] = useState(false);
   const [titleDraft, setTitleDraft] = useState("");
   const [postRsDraft, setPostRsDraft] = useState("");
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   useEffect(() => {
     if (article) {
@@ -198,6 +201,8 @@ export function MesArticleSidePanel({
   const performMainImageUpload = useCallback(
     async (file: File) => {
       if (!article) return;
+      setUploadingImage(true);
+      setUploadError(null);
       try {
         const { uploadArticleImage } = await import("@/lib/uploadArticleImage");
         const { publicUrl } = await uploadArticleImage({
@@ -213,10 +218,16 @@ export function MesArticleSidePanel({
         if (res.ok) {
           const updated = await res.json();
           setArticle((prev) => (prev ? { ...prev, lienPhoto: updated.lienPhoto } : null));
+          setLastSavedAt(new Date());
           router.refresh();
+        } else {
+          setUploadError("Erreur lors de la mise à jour de l’image principale");
         }
       } catch (e) {
         console.error("Upload image", e);
+        setUploadError("Erreur lors de l’upload de l’image principale");
+      } finally {
+        setUploadingImage(false);
       }
     },
     [article, router]
@@ -260,6 +271,7 @@ export function MesArticleSidePanel({
           const updated = await res.json();
           setArticle((prev) => (prev ? { ...prev, ...updated } : null));
           setEditorKey((k) => k + 1);
+          setLastSavedAt(new Date());
           router.refresh();
         }
       } catch (e) {
@@ -317,13 +329,24 @@ export function MesArticleSidePanel({
               Édition
             </button>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg border border-rer-border bg-white px-3 py-1.5 text-xs font-medium text-rer-muted hover:bg-rer-app"
-          >
-            Fermer
-          </button>
+          <div className="flex items-center gap-3">
+            {mode === "edit" && lastSavedAt && (
+              <span className="text-[11px] text-rer-muted">
+                Enregistré à{" "}
+                {lastSavedAt.toLocaleTimeString("fr-FR", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg border border-rer-border bg-white px-3 py-1.5 text-xs font-medium text-rer-muted hover:bg-rer-app"
+            >
+              Fermer
+            </button>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 py-4">
@@ -450,7 +473,14 @@ export function MesArticleSidePanel({
           {!loading && !error && article && mode === "edit" && ref && (
             <div className="space-y-4">
               <div className="flex items-center justify-end text-[11px] text-rer-muted">
-                {savingContent ? "Enregistrement…" : "Enregistré"}
+                {savingContent
+                  ? "Enregistrement…"
+                  : lastSavedAt
+                  ? `Enregistré à ${lastSavedAt.toLocaleTimeString("fr-FR", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}`
+                  : "Enregistré"}
               </div>
               <ArticleEditorCard
                 key={editorKey}
@@ -468,6 +498,8 @@ export function MesArticleSidePanel({
                   postRs: postRsDraft,
                 }}
                 referentiels={ref}
+                uploadingImage={uploadingImage}
+                uploadError={uploadError}
                 onChange={handleEditorChange}
                 onUploadMainImage={performMainImageUpload}
               />

@@ -327,7 +327,12 @@ export default function DepotPage() {
     );
   }
 
+  const [uploadingMainImage, setUploadingMainImage] = useState(false);
+  const [uploadMainImageError, setUploadMainImageError] = useState<string | null>(null);
+
   const performMainImageUpload = async (file: File) => {
+    setUploadingMainImage(true);
+    setUploadMainImageError(null);
     try {
       const { uploadArticleImage } = await import("@/lib/uploadArticleImage");
       const { publicUrl } = await uploadArticleImage({
@@ -342,7 +347,9 @@ export default function DepotPage() {
         error instanceof Error && error.message
           ? error.message
           : "Erreur lors de l’upload de l’image principale.";
-      alert(message);
+      setUploadMainImageError(message);
+    } finally {
+      setUploadingMainImage(false);
     }
   };
 
@@ -428,6 +435,8 @@ export default function DepotPage() {
             postRs,
           }}
           referentiels={ref}
+          uploadingImage={uploadingMainImage}
+          uploadError={uploadMainImageError}
           onChange={(patch: Partial<ArticleEditorValue>) => {
             if (patch.formatId !== undefined) setFormatId(patch.formatId);
             if (patch.rubriqueId !== undefined) setRubriqueId(patch.rubriqueId);

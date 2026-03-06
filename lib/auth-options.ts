@@ -11,6 +11,9 @@ declare module "next-auth" {
       role: string;
       auteurId?: string | null;
     };
+    /** Présent quand on simule un autre utilisateur : permet d’afficher le footer et "Revenir à mon compte" */
+    originalUserId?: string | null;
+    originalUserEmail?: string | null;
   }
 }
 
@@ -19,6 +22,8 @@ declare module "next-auth/jwt" {
     id: string;
     role: string;
     auteurId?: string | null;
+    originalUserId?: string | null;
+    originalUserEmail?: string | null;
   }
 }
 
@@ -61,6 +66,8 @@ if (enableImpersonate) {
       name: "Impersonation (beta)",
       credentials: {
         email: { label: "Email", type: "email" },
+        originalUserEmail: { label: "Original email", type: "text" },
+        originalUserId: { label: "Original user id", type: "text" },
       },
       async authorize(credentials) {
         if (!credentials?.email) return null;
@@ -69,12 +76,18 @@ if (enableImpersonate) {
           where: { email },
         });
         if (!user) return null;
-        return {
+        const out: Record<string, unknown> = {
           id: user.id,
           email: user.email,
           role: user.role,
           auteurId: user.auteurId,
         };
+        // Si on a l’admin d’origine, on est en train de “simuler” → on garde la trace pour le footer
+        if (credentials.originalUserEmail?.trim()) {
+          out._originalUserEmail = credentials.originalUserEmail.trim();
+          out._originalUserId = credentials.originalUserId?.trim() || null;
+        }
+        return out as typeof user & { _originalUserEmail?: string; _originalUserId?: string | null };
       },
     })
   );
@@ -88,6 +101,9 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id;
         token.role = (user as { role?: string }).role ?? "auteur";
         token.auteurId = (user as { auteurId?: string | null }).auteurId;
+        const u = user as { _originalUserEmail?: string; _originalUserId?: string | null };
+        token.originalUserEmail = u._originalUserEmail ?? null;
+        token.originalUserId = u._originalUserId ?? null;
       }
       return token;
     },
@@ -97,6 +113,8 @@ export const authOptions: NextAuthOptions = {
         session.user.role = token.role;
         session.user.auteurId = token.auteurId;
       }
+      session.originalUserEmail = token.originalUserEmail ?? null;
+      session.originalUserId = token.originalUserId ?? null;
       return session;
     },
   },

@@ -1,15 +1,20 @@
-"use client";
+ "use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
 
 export function AppMainNav() {
   const pathname = usePathname();
+  const { data: session } = useSession();
 
   const isOnArticles = pathname.startsWith("/articles");
   const isOnMesArticles = pathname.startsWith("/mes-articles");
   const isOnAdmin =
     pathname.startsWith("/admin") || pathname.startsWith("/relecteurs");
+
+  const role = (session?.user as { role?: string } | undefined)?.role;
+  const canSeeAdmin = role === "admin" || role === "relecteur";
 
   const baseClasses =
     "inline-flex items-center rounded-full px-3 py-1 text-sm font-medium transition-colors";
@@ -35,14 +40,16 @@ export function AppMainNav() {
       >
         Mes articles
       </Link>
-      <Link
-        href="/admin"
-        className={`${baseClasses} ${
-          isOnAdmin ? activeClasses : inactiveClasses
-        }`}
-      >
-        Admin
-      </Link>
+      {canSeeAdmin && (
+        <Link
+          href="/admin"
+          className={`${baseClasses} ${
+            isOnAdmin ? activeClasses : inactiveClasses
+          }`}
+        >
+          Admin
+        </Link>
+      )}
     </nav>
   );
 }

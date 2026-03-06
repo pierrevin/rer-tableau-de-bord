@@ -208,7 +208,7 @@ export function getRubriqueBadgeClasses(libelle?: string): string {
     return base + " bg-[#16A34A] text-white";
   }
   if (key.includes("vie pratique")) {
-    return base + " bg-[#EA580C] text-white";
+    return base + " bg-[#0D9488] text-white";
   }
   if (key.includes("société")) {
     return base + " bg-[#DB2777] text-white";
