@@ -59,6 +59,39 @@ export function MesArticlesTable({
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
+  const [bulkMode, setBulkMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  const toggleSelected = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
+
+  const exitBulkMode = () => {
+    setBulkMode(false);
+    setSelectedIds([]);
+  };
+
+  const handleBulkDelete = async () => {
+    if (!selectedIds.length) return;
+    const confirmed = window.confirm(
+      `Supprimer définitivement ${selectedIds.length} article(s) sélectionné(s) ?`
+    );
+    if (!confirmed) return;
+    try {
+      await Promise.all(
+        selectedIds.map((id) =>
+          fetch(`/api/articles/${id}`, { method: "DELETE" })
+        )
+      );
+      exitBulkMode();
+      router.refresh();
+    } catch {
+      alert("Erreur réseau lors de la suppression en masse.");
+    }
+  };
+
   if (!articles.length) {
     return (
       <div className="overflow-x-auto">
@@ -78,6 +111,43 @@ export function MesArticlesTable({
 
   return (
     <>
+      <div className="mb-2 flex items-center justify-between text-xs text-rer-muted">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              if (bulkMode) {
+                exitBulkMode();
+              } else {
+                setBulkMode(true);
+              }
+            }}
+            className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-medium ${
+              bulkMode
+                ? "border-rer-blue bg-rer-blue text-white"
+                : "border-rer-border bg-white text-rer-text hover:bg-rer-app"
+            }`}
+          >
+            Sélection multiple
+          </button>
+          {bulkMode && (
+            <span className="text-[11px] text-rer-muted">
+              {selectedIds.length
+                ? `${selectedIds.length} article(s) sélectionné(s)`
+                : "Cliquez sur « Sélectionner » dans la colonne Actions"}
+            </span>
+          )}
+        </div>
+        {bulkMode && selectedIds.length > 0 && (
+          <button
+            type="button"
+            onClick={handleBulkDelete}
+            className="inline-flex items-center rounded-full border border-red-200 bg-red-50 px-3 py-1 text-[11px] font-medium text-red-600 hover:bg-red-100"
+          >
+            Supprimer la sélection ({selectedIds.length})
+          </button>
+        )}
+      </div>
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-rer-border bg-white shadow-sm ring-1 ring-rer-border">
           <thead className="bg-rer-blue text-white">
@@ -173,6 +243,21 @@ export function MesArticlesTable({
                       >
                         Continuer l&apos;édition
                       </Link>
+                    )}
+                    {bulkMode && (
+                      <button
+                        type="button"
+                        onClick={() => toggleSelected(article.id)}
+                        className={`mt-1 inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] ${
+                          selectedIds.includes(article.id)
+                            ? "border-rer-blue bg-rer-blue text-white"
+                            : "border-rer-border bg-white text-rer-muted hover:bg-rer-app"
+                        }`}
+                      >
+                        {selectedIds.includes(article.id)
+                          ? "Sélectionné"
+                          : "Sélectionner"}
+                      </button>
                     )}
                   </div>
                 </td>

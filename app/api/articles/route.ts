@@ -1,6 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth";
+import { ingestDebug } from "@/lib/ingest-debug";
+
+function extractFirstImageSrc(html: string | null): string | null {
+  if (!html) return null;
+  const matches = Array.from(
+    html.matchAll(/<img[^>]+src=["']([^"']+)["']/gi)
+  );
+  if (matches.length === 1) {
+    return matches[0][1];
+  }
+  return null;
+}
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -153,6 +165,8 @@ export async function POST(request: NextRequest) {
       postRs,
       lienPhoto,
       lienGoogleDoc,
+      etatSlug,
+      isDraft,
     } = body;
 
     const finalContenuHtml: string | null =
@@ -162,39 +176,107 @@ export async function POST(request: NextRequest) {
         ? contenu
         : null;
 
-    if (!titre || typeof titre !== "string" || !finalContenuHtml || !auteurId) {
+    const requestedSlug =
+      typeof etatSlug === "string" ? etatSlug.trim() : "";
+    const targetSlug =
+      requestedSlug || (isDraft === true ? "brouillon" : "a_relire");
+    const draftMode = targetSlug === "brouillon";
+
+    // En brouillon, on autorise un titre / contenu vides.
+    // En mode normal, on garde les validations strictes.
+    const safeTitre =
+      typeof titre === "string" && titre.trim()
+        ? titre.trim()
+        : draftMode
+        ? "Sans titre"
+        : "";
+    const safeContenuHtml =
+      finalContenuHtml && finalContenuHtml.trim()
+        ? finalContenuHtml.trim()
+        : draftMode
+        ? "<p></p>"
+        : "";
+
+    if (!auteurId || typeof auteurId !== "string" || !auteurId.trim()) {
+      return NextResponse.json(
+        { error: "Champs requis : auteurId" },
+        { status: 400 }
+      );
+    }
+    if (!draftMode && (!safeTitre || !safeContenuHtml)) {
       return NextResponse.json(
         { error: "Champs requis : titre, contenu, auteurId" },
         { status: 400 }
       );
     }
 
-    const etatArelire = await prisma.etat.findFirst({
-      where: { slug: "a_relire" },
+    const htmlForDebug = safeContenuHtml || "";
+
+    // #region agent log
+    ingestDebug({
+      sessionId: "a34272",
+      runId: "pre-fix",
+      hypothesisId: "H_ARTICLE_POST_CONTENT",
+      location: "app/api/articles/route.ts:POST:beforeCreate",
+      message: "Creating article from DepotPage",
+      data: {
+        contenuLength: htmlForDebug.length,
+        hasImgTag: htmlForDebug.includes("<img"),
+        hasSocialPostBlock: htmlForDebug.includes('class="social-post"'),
+        hasEmbedBlock: htmlForDebug.includes('class="embed-block"'),
+        targetSlug,
+      },
     });
+    // #endregion
+
+    let targetEtat = await prisma.etat.findFirst({
+      where: { slug: targetSlug },
+    });
+    if (!targetEtat && targetSlug === "brouillon") {
+      targetEtat = await prisma.etat.create({
+        data: { slug: "brouillon", libelle: "Brouillon", ordre: -1 },
+      });
+    }
+
+    const autoLienPhoto = extractFirstImageSrc(safeContenuHtml);
 
     const article = await prisma.article.create({
       data: {
-        titre: titre.trim(),
+        titre: safeTitre,
         chapo: chapo?.trim() || null,
-        contenu: finalContenuHtml.trim(),
+        contenu: safeContenuHtml,
         contenuJson: contenuJson ?? null,
-        auteurId,
+        auteurId: auteurId.trim(),
         mutuelleId: mutuelleId || null,
         rubriqueId: rubriqueId || null,
         formatId: formatId || null,
-        etatId: etatArelire?.id ?? null,
+        etatId: targetEtat?.id ?? null,
         legendePhoto: legendePhoto?.trim() || null,
         postRs: postRs?.trim() || null,
-        lienPhoto: lienPhoto?.trim() || null,
+        lienPhoto: (lienPhoto?.trim() || autoLienPhoto) ?? null,
         lienGoogleDoc: lienGoogleDoc?.trim() || null,
-        dateDepot: new Date(),
+        dateDepot: draftMode ? null : new Date(),
       },
       include: {
         auteur: true,
         etat: true,
       },
     });
+
+    // #region agent log
+    ingestDebug({
+      sessionId: "a34272",
+      runId: "pre-fix",
+      hypothesisId: "H_ARTICLE_LIENPHOTO",
+      location: "app/api/articles/route.ts:POST:afterCreate",
+      message: "Article created with lienPhoto",
+      data: {
+        articleId: article.id,
+        hasLienPhoto: !!article.lienPhoto,
+        lienPhoto: article.lienPhoto ?? null,
+      },
+    });
+    // #endregion
 
     return NextResponse.json(article);
   } catch (e) {

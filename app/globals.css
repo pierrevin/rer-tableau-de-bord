@@ -11,6 +11,16 @@ body {
   @apply bg-rer-app text-rer-text antialiased font-sans;
 }
 
+.ProseMirror,
+.ProseMirror:focus,
+.ProseMirror-focused {
+  outline: none;
+}
+
+.ProseMirror-selectednode {
+  outline: none;
+}
+
 a:not([class]) {
   @apply text-rer-blue hover:text-rer-blue/80;
 }
@@ -35,5 +45,34 @@ td {
 .prose ul li,
 .prose ol li {
   @apply leading-snug;
+}
+
+.prose img.article-image {
+  @apply my-4 w-full h-auto max-h-96 object-cover rounded-md border border-rer-border bg-rer-app;
+}
+
+.prose p.image-caption {
+  @apply mt-1 text-xs text-rer-muted min-h-[1.25rem];
+}
+
+.prose p.image-caption:empty::before {
+  content: "Légende de l’image…";
+  color: rgb(107 114 128 / 0.7); /* proche de text-gray-500 */
+}
+
+.prose figure.embed-block {
+  @apply my-4 rounded-xl border border-rer-border bg-white px-3 py-2 text-sm text-rer-text;
+}
+
+.prose figure.embed-block .embed-url {
+  @apply break-words text-rer-blue;
+}
+
+.prose section.social-post {
+  @apply my-4 rounded-md border border-rer-border bg-rer-app px-3 py-3 text-sm text-rer-text;
+}
+
+.prose .social-post-label {
+  @apply mb-1 text-[11px] font-semibold uppercase tracking-wide text-rer-muted;
 }
 

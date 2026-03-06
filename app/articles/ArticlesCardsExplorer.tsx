@@ -39,6 +39,74 @@ type ArticleDetail = {
   etat: { libelle: string; slug: string } | null;
 };
 
+function transformEmbeds(html: string): string {
+  if (typeof window === "undefined" || !html) return html;
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, "text/html");
+
+    const blocks = doc.querySelectorAll("figure.embed-block .embed-url");
+    blocks.forEach((p) => {
+      const figure = p.closest("figure.embed-block");
+      if (!figure) return;
+      const raw = p.textContent ?? "";
+      const url = raw.trim();
+      if (!url) return;
+
+      let iframeSrc: string | null = null;
+      let title = "Contenu embarqué";
+
+      try {
+        const parsed = new URL(url);
+        const host = parsed.hostname.toLowerCase();
+
+        // YouTube
+        if (host.includes("youtube.com") || host === "youtu.be") {
+          let videoId = "";
+          if (host === "youtu.be") {
+            videoId = parsed.pathname.replace("/", "").split(/[/?#&]/)[0] ?? "";
+          } else {
+            videoId =
+              parsed.searchParams.get("v") ||
+              parsed.pathname.split("/").filter(Boolean).pop() ||
+              "";
+          }
+          if (videoId) {
+            iframeSrc = `https://www.youtube.com/embed/${videoId}`;
+            title = "Vidéo YouTube";
+          }
+        }
+
+        // Datawrapper
+        if (!iframeSrc && host.includes("datawrapper.dwcdn.net")) {
+          const parts = parsed.pathname.split("/").filter(Boolean);
+          const slug = parts.slice(0, 2).join("/") || "";
+          if (slug) {
+            iframeSrc = `https://datawrapper.dwcdn.net/${slug}/`;
+            title = "Graphique Datawrapper";
+          }
+        }
+      } catch {
+        // URL invalide : on laisse tel quel
+      }
+
+      if (!iframeSrc) {
+        return;
+      }
+
+      figure.innerHTML = `
+<div class="embed-responsive">
+  <iframe src="${iframeSrc}" title="${title}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy"></iframe>
+</div>
+`.trim();
+    });
+
+    return doc.body.innerHTML;
+  } catch {
+    return html;
+  }
+}
+
 type ArticlesExplorerViewProps = {
   articles: ArticleSummary[];
   total: number;
@@ -248,6 +316,11 @@ function ArticleDetailContent({
 
   const canCopy = !!detail && !loading && !error;
 
+  const contenuHtml = useMemo(
+    () => (detail?.contenu ? transformEmbeds(detail.contenu) : ""),
+    [detail?.contenu]
+  );
+
   const handleCopyHtml = async () => {
     if (!detail || loading || error) return;
     try {
@@ -346,12 +419,6 @@ function ArticleDetailContent({
           >
             Exporter Word
           </a>
-          <Link
-            href={`/articles/${selectedId}`}
-            className="inline-flex items-center rounded-md border border-rer-border bg-white px-2 py-1 text-[11px] font-medium text-rer-text hover:bg-rer-app/60"
-          >
-            Ouvrir en pleine page
-          </Link>
         </div>
       </div>
 
@@ -436,9 +503,10 @@ function ArticleDetailContent({
           )}
 
           {detail.contenu && (
-            <div className="prose max-w-none text-sm text-rer-text">
-              <p className="whitespace-pre-wrap">{detail.contenu}</p>
-            </div>
+            <div
+              className="prose max-w-none text-sm text-rer-text"
+              dangerouslySetInnerHTML={{ __html: contenuHtml }}
+            />
           )}
 
           {detail.postRs && (
@@ -504,6 +572,7 @@ export function ArticlesExplorerView({
       return initialSelectedId || (articles[0]?.id ?? null);
     });
   }, [articles, total, initialPage, initialSelectedId]);
+
 
   const selectedArticle = useMemo(
     () => visibleArticles.find((a) => a.id === selectedId) || null,
@@ -816,6 +885,7 @@ export function ArticlesExplorerView({
                 error={error}
                 detail={detail}
                 showEtat={showEtat}
+                onDelete={handleDelete}
               />
             </div>
           </div>

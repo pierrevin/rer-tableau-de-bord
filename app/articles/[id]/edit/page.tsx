@@ -11,6 +11,7 @@ type Article = {
   chapo: string | null;
   contenu: string;
   contenuJson: unknown | null;
+  lienPhoto: string | null;
   legendePhoto: string | null;
   postRs: string | null;
   etatId: string | null;
@@ -50,6 +51,7 @@ export default function ArticleEditPage() {
   const [mutuelleId, setMutuelleId] = useState("");
   const [rubriqueId, setRubriqueId] = useState("");
   const [formatId, setFormatId] = useState("");
+  const [lienPhoto, setLienPhoto] = useState("");
   const [legendePhoto, setLegendePhoto] = useState("");
   const [postRs, setPostRs] = useState("");
 
@@ -71,6 +73,7 @@ export default function ArticleEditPage() {
         setMutuelleId(a.mutuelleId ?? "");
         setRubriqueId(a.rubriqueId ?? "");
         setFormatId(a.formatId ?? "");
+        setLienPhoto(a.lienPhoto ?? "");
         setLegendePhoto(a.legendePhoto ?? "");
         setPostRs(a.postRs ?? "");
       }
@@ -110,6 +113,7 @@ export default function ArticleEditPage() {
           mutuelleId: mutuelleId || null,
           rubriqueId: rubriqueId || null,
           formatId: formatId || null,
+          lienPhoto: lienPhoto || null,
           legendePhoto: legendePhoto || null,
           postRs: postRs || null,
         }),
@@ -167,6 +171,7 @@ export default function ArticleEditPage() {
           <RichArticleEditor
             initialJson={article.contenuJson ?? undefined}
             initialHtml={article.contenu}
+            articleId={id}
             onChange={({ json, html }) => {
               setContenuJson(json);
               setContenuHtml(html);
@@ -241,6 +246,39 @@ export default function ArticleEditPage() {
             onChange={(e) => setLegendePhoto(e.target.value)}
             className="w-full border rounded px-3 py-2"
           />
+        </div>
+        <div className="space-y-1">
+          <label className="block text-sm font-medium mb-1">
+            Image principale (URL)
+          </label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={lienPhoto}
+              onChange={(e) => setLienPhoto(e.target.value)}
+              className="w-full border rounded px-3 py-2"
+              placeholder="URL de l’image principale (vignette)"
+            />
+            <button
+              type="button"
+              className="whitespace-nowrap rounded border border-rer-border bg-white px-3 py-2 text-sm hover:bg-rer-app"
+              onClick={() => {
+                const html = contenuHtml || article.contenu || "";
+                const match = html.match(/<img[^>]+src=[\"']([^\"']+)[\"']/i);
+                if (!match) {
+                  alert("Aucune image trouvée dans le contenu.");
+                  return;
+                }
+                setLienPhoto(match[1]);
+              }}
+            >
+              Définir comme image principale
+            </button>
+          </div>
+          <p className="text-xs text-rer-muted">
+            Si aucune URL n’est renseignée, la première image du contenu sera utilisée
+            automatiquement (si elle est seule).
+          </p>
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Post réseaux sociaux</label>

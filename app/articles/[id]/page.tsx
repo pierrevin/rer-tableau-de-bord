@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import {
@@ -29,6 +29,74 @@ type Article = {
 
 type Session = { user?: { role?: string } } | null;
 
+function transformEmbeds(html: string): string {
+  if (typeof window === "undefined" || !html) return html;
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, "text/html");
+
+    const blocks = doc.querySelectorAll("figure.embed-block .embed-url");
+    blocks.forEach((p) => {
+      const figure = p.closest("figure.embed-block");
+      if (!figure) return;
+      const raw = p.textContent ?? "";
+      const url = raw.trim();
+      if (!url) return;
+
+      let iframeSrc: string | null = null;
+      let title = "Contenu embarqué";
+
+      try {
+        const parsed = new URL(url);
+        const host = parsed.hostname.toLowerCase();
+
+        // YouTube
+        if (host.includes("youtube.com") || host === "youtu.be") {
+          let videoId = "";
+          if (host === "youtu.be") {
+            videoId = parsed.pathname.replace("/", "").split(/[/?#&]/)[0] ?? "";
+          } else {
+            videoId =
+              parsed.searchParams.get("v") ||
+              parsed.pathname.split("/").filter(Boolean).pop() ||
+              "";
+          }
+          if (videoId) {
+            iframeSrc = `https://www.youtube.com/embed/${videoId}`;
+            title = "Vidéo YouTube";
+          }
+        }
+
+        // Datawrapper
+        if (!iframeSrc && host.includes("datawrapper.dwcdn.net")) {
+          const parts = parsed.pathname.split("/").filter(Boolean);
+          const slug = parts.slice(0, 2).join("/") || "";
+          if (slug) {
+            iframeSrc = `https://datawrapper.dwcdn.net/${slug}/`;
+            title = "Graphique Datawrapper";
+          }
+        }
+      } catch {
+        // URL invalide : on laisse tel quel
+      }
+
+      if (!iframeSrc) {
+        return;
+      }
+
+      figure.innerHTML = `
+<div class="embed-responsive">
+  <iframe src="${iframeSrc}" title="${title}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy"></iframe>
+</div>
+`.trim();
+    });
+
+    return doc.body.innerHTML;
+  } catch {
+    return html;
+  }
+}
+
 export default function ArticleDetailPage() {
   const params = useParams();
   const id = params.id as string;
@@ -50,6 +118,11 @@ export default function ArticleDetailPage() {
 
   const canEdit =
     session?.user?.role === "admin" || session?.user?.role === "relecteur";
+
+  const contenuHtml = useMemo(
+    () => (article?.contenu ? transformEmbeds(article.contenu) : ""),
+    [article?.contenu]
+  );
 
   if (loading) return <div className="p-6">Chargement…</div>;
   if (!article) return <div className="p-6">Article introuvable.</div>;
@@ -185,9 +258,10 @@ export default function ArticleDetailPage() {
           )}
 
           {article.contenu && (
-            <div className="prose max-w-none text-sm text-rer-text">
-              <p className="whitespace-pre-wrap">{article.contenu}</p>
-            </div>
+            <div
+              className="prose max-w-none text-sm text-rer-text prose-h2:text-2xl prose-h2:font-semibold prose-h3:text-xl prose-h3:font-semibold"
+              dangerouslySetInnerHTML={{ __html: contenuHtml }}
+            />
           )}
 
           {article.postRs && (

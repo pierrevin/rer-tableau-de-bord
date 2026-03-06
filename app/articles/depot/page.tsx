@@ -2,13 +2,14 @@
 
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
-import RichArticleEditor from "../../components/RichArticleEditor";
+import { useRouter } from "next/navigation";
+import ArticleEditorCard, {
+  ArticleEditorReferentiels,
+  ArticleEditorValue,
+} from "../../components/ArticleEditorCard";
+import { ingestDebug } from "@/lib/ingest-debug";
 
-type Referentiels = {
-  auteurs: { id: string; prenom: string; nom: string }[];
-  mutuelles: { id: string; nom: string }[];
-  rubriques: { id: string; libelle: string }[];
-  formats: { id: string; libelle: string; signesReference: number | null }[];
+type Referentiels = ArticleEditorReferentiels & {
   etats: { id: string; slug: string; libelle: string }[];
 };
 
@@ -19,33 +20,183 @@ type ImportWordResponse = {
 };
 
 export default function DepotPage() {
+  const router = useRouter();
   const [ref, setRef] = useState<Referentiels | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitStatus, setSubmitStatus] = useState<"idle" | "sending" | "ok" | "error">("idle");
   const [importing, setImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const mainImageInputRef = useRef<HTMLInputElement>(null);
+  const draftSaveTimeoutRef = useRef<number | null>(null);
+  const restoringDraftRef = useRef(false);
+  const restoredOnceRef = useRef(false);
 
   const [titre, setTitre] = useState("");
-  const [chapo, setChapo] = useState("");
   const [contenuJson, setContenuJson] = useState<unknown | null>(null);
   const [contenuHtml, setContenuHtml] = useState("");
   const [auteurId, setAuteurId] = useState("");
   const [mutuelleId, setMutuelleId] = useState("");
   const [rubriqueId, setRubriqueId] = useState("");
   const [formatId, setFormatId] = useState("");
-  const [legendePhoto, setLegendePhoto] = useState("");
-  const [postRs, setPostRs] = useState("");
+  const [draftId, setDraftId] = useState<string | null>(null);
+  const [draftStatus, setDraftStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [session, setSession] = useState<{ user?: { auteurId?: string | null } } | null>(
+    null
+  );
+  const [lienPhoto, setLienPhoto] = useState<string | null>(null);
+  const [legendePhoto, setLegendePhoto] = useState<string>("");
+  const [isMainImageDragOver, setIsMainImageDragOver] = useState(false);
+  const [postRs, setPostRs] = useState<string>("");
+  const [editorResetKey, setEditorResetKey] = useState(0);
+  const [formatMenuOpen, setFormatMenuOpen] = useState(false);
+  const [rubriqueMenuOpen, setRubriqueMenuOpen] = useState(false);
+  const [signatureMenuOpen, setSignatureMenuOpen] = useState(false);
 
   useEffect(() => {
     fetch("/api/referentiels")
       .then((r) => r.json())
       .then((data) => {
         setRef(data);
-        if (data.auteurs?.length && !auteurId) setAuteurId(data.auteurs[0].id);
       })
       .catch(() => setRef(null))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    fetch("/api/auth/session")
+      .then((r) => r.json())
+      .then((data) => setSession(data ?? null))
+      .catch(() => setSession(null));
+  }, []);
+
+  // Auto‑sélection de l’auteur connecté et, si possible, de sa mutuelle.
+  useEffect(() => {
+    if (!ref || !session) return;
+    const auteurSessionId = (session.user as any)?.auteurId as string | undefined;
+    if (auteurSessionId && !auteurId) {
+      setAuteurId(auteurSessionId);
+    }
+    if (!mutuelleId && auteurSessionId) {
+      const auteur = (ref.auteurs as any[]).find((a) => a.id === auteurSessionId);
+      const mId = auteur?.mutuelleId as string | undefined;
+      if (mId) {
+        setMutuelleId(mId);
+      }
+    }
+  }, [ref, session, auteurId, mutuelleId]);
+
+  // Récupération d’un brouillon existant (dernier brouillon de l’utilisateur).
+  useEffect(() => {
+    if (!ref || !auteurId) return;
+    if (restoredOnceRef.current) return;
+    restoredOnceRef.current = true;
+    if (titre.trim() || contenuHtml.trim()) return;
+
+    restoringDraftRef.current = true;
+    (async () => {
+      try {
+        const listRes = await fetch("/api/articles?mine=1&etat=brouillon&limit=1");
+        if (!listRes.ok) return;
+        const listData = await listRes.json().catch(() => null);
+        const draftSummary = (listData?.articles?.[0] ?? null) as { id?: string } | null;
+        const id = draftSummary?.id ? String(draftSummary.id) : "";
+        if (!id) return;
+
+        const detailRes = await fetch(`/api/articles/${id}`);
+        if (!detailRes.ok) return;
+        const detail = await detailRes.json().catch(() => null);
+        if (!detail) return;
+
+        // Ne pas écraser si l’utilisateur a déjà commencé à saisir.
+        if (titre.trim() || contenuHtml.trim()) return;
+
+        setDraftId(id);
+        setTitre((detail.titre ?? "").trim() === "Sans titre" ? "" : (detail.titre ?? ""));
+        setContenuHtml(detail.contenu ?? "");
+        setContenuJson(detail.contenuJson ?? null);
+        if (detail.formatId) setFormatId(detail.formatId);
+        if (detail.rubriqueId) setRubriqueId(detail.rubriqueId);
+        if (detail.mutuelleId) setMutuelleId(detail.mutuelleId);
+        setLienPhoto(detail.lienPhoto ?? null);
+        setLegendePhoto(detail.legendePhoto ?? "");
+        setPostRs(detail.postRs ?? "");
+        setDraftStatus("saved");
+      } finally {
+        restoringDraftRef.current = false;
+      }
+    })();
+  }, [ref, auteurId, titre, contenuHtml]);
+
+  // Autosave brouillon (debounce)
+  useEffect(() => {
+    if (!ref || !auteurId) return;
+    if (restoringDraftRef.current) return;
+    if (submitStatus === "sending") return;
+
+    const hasSomething = !!(titre.trim() || contenuHtml.trim());
+    if (!hasSomething) return;
+
+    if (draftSaveTimeoutRef.current) {
+      window.clearTimeout(draftSaveTimeoutRef.current);
+    }
+
+    draftSaveTimeoutRef.current = window.setTimeout(async () => {
+      setDraftStatus("saving");
+      try {
+        const payload = {
+          titre,
+          contenuHtml: contenuHtml || "<p></p>",
+          contenuJson,
+          auteurId,
+          mutuelleId: mutuelleId || undefined,
+          rubriqueId: rubriqueId || undefined,
+          formatId: formatId || undefined,
+          lienPhoto: lienPhoto || undefined,
+          legendePhoto: legendePhoto || undefined,
+          postRs: postRs || undefined,
+          etatSlug: "brouillon",
+          isDraft: true,
+        };
+
+        const res = await fetch(draftId ? `/api/articles/${draftId}` : "/api/articles", {
+          method: draftId ? "PATCH" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) {
+          setDraftStatus("error");
+          return;
+        }
+        const data = await res.json().catch(() => null);
+        if (!draftId && data?.id) {
+          setDraftId(String(data.id));
+        }
+        setDraftStatus("saved");
+      } catch {
+        setDraftStatus("error");
+      }
+    }, 1800);
+
+    return () => {
+      if (draftSaveTimeoutRef.current) {
+        window.clearTimeout(draftSaveTimeoutRef.current);
+      }
+    };
+  }, [
+    ref,
+    auteurId,
+    draftId,
+    titre,
+    contenuHtml,
+    contenuJson,
+    mutuelleId,
+    rubriqueId,
+    formatId,
+    submitStatus,
+    lienPhoto,
+    legendePhoto,
+    postRs,
+  ]);
 
   const handleImportWord = () => {
     fileInputRef.current?.click();
@@ -70,9 +221,15 @@ export default function DepotPage() {
       }
       const data: ImportWordResponse = await res.json();
       if (data.titre != null) setTitre(data.titre);
-      if (data.chapo != null) setChapo(data.chapo);
+      // Si un chapô est fourni, on l'intègre directement dans le contenu
+      // comme premier paragraphe marqué en chapô.
+      const importedChapo = (data.chapo ?? "").trim();
+      const importedContenu = data.contenu ?? "";
+      const chapoHtml = importedChapo
+        ? `<p class="chapo">${importedChapo}</p>`
+        : "";
       setContenuJson(null);
-      setContenuHtml(data.contenu ?? "");
+      setContenuHtml(`${chapoHtml}${importedContenu}`);
     } catch {
       alert("Erreur lors de l’import.");
     } finally {
@@ -86,6 +243,14 @@ export default function DepotPage() {
       alert("Veuillez sélectionner un auteur.");
       return;
     }
+    if (!formatId) {
+      alert("Veuillez sélectionner un format.");
+      return;
+    }
+    if (!rubriqueId) {
+      alert("Veuillez sélectionner une rubrique.");
+      return;
+    }
     const html = contenuHtml.trim();
     if (!html) {
       alert("Merci de saisir le contenu de l’article.");
@@ -93,20 +258,37 @@ export default function DepotPage() {
     }
     setSubmitStatus("sending");
     try {
-      const res = await fetch("/api/articles", {
-        method: "POST",
+      // #region agent log
+      ingestDebug({
+        sessionId: "a34272",
+        runId: "pre-fix",
+        hypothesisId: "H_DEPOT_SUBMIT",
+        location: "app/articles/depot/page.tsx:handleSubmit:beforeFetch",
+        message: "Submitting new article",
+        data: {
+          titreLength: titre.length,
+          htmlLength: html.length,
+          hasImgTag: html.includes("<img"),
+        },
+      });
+      // #endregion
+
+      const res = await fetch(draftId ? `/api/articles/${draftId}` : "/api/articles", {
+        method: draftId ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           titre,
-          chapo: chapo || undefined,
           contenuHtml: html,
           contenuJson,
           auteurId,
           mutuelleId: mutuelleId || undefined,
           rubriqueId: rubriqueId || undefined,
           formatId: formatId || undefined,
+          lienPhoto: lienPhoto || undefined,
           legendePhoto: legendePhoto || undefined,
           postRs: postRs || undefined,
+          etatSlug: "a_relire",
+          isDraft: false,
         }),
       });
       if (!res.ok) {
@@ -115,13 +297,22 @@ export default function DepotPage() {
         alert(err.error || "Erreur lors de l’envoi.");
         return;
       }
+      const saved = await res.json().catch(() => null);
+      const newId = saved?.id ? String(saved.id) : null;
       setSubmitStatus("ok");
+      setDraftId(null);
+      setDraftStatus("idle");
       setTitre("");
-      setChapo("");
       setContenuHtml("");
       setContenuJson(null);
+      setLienPhoto(null);
       setLegendePhoto("");
       setPostRs("");
+      if (newId) {
+        router.push(`/articles?mine=1&article=${encodeURIComponent(newId)}`);
+      } else {
+        router.push(`/articles?mine=1`);
+      }
     } catch {
       setSubmitStatus("error");
       alert("Erreur réseau.");
@@ -136,164 +327,138 @@ export default function DepotPage() {
     );
   }
 
-  const signesRef = ref.formats.find((f) => f.id === formatId)?.signesReference;
-  const plainFromHtml = contenuHtml.replace(/<[^>]+>/g, " ");
-  const signesCount = (plainFromHtml + titre + chapo).replace(/\s/g, "").length;
+  const performMainImageUpload = async (file: File) => {
+    try {
+      const { uploadArticleImage } = await import("@/lib/uploadArticleImage");
+      const { publicUrl } = await uploadArticleImage({
+        file,
+        filename: file.name,
+        articleId: draftId ?? undefined,
+      });
+      setLienPhoto(publicUrl);
+    } catch (error) {
+      console.error(error);
+      const message =
+        error instanceof Error && error.message
+          ? error.message
+          : "Erreur lors de l’upload de l’image principale.";
+      alert(message);
+    }
+  };
+
+  const handleMainImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    await performMainImageUpload(file);
+  };
+
+  const handleIgnoreDraft = () => {
+    setDraftId(null);
+    setDraftStatus("idle");
+    setTitre("");
+    setContenuHtml("");
+    setContenuJson(null);
+    setLienPhoto(null);
+    setLegendePhoto("");
+    setPostRs("");
+    setFormatId("");
+    setRubriqueId("");
+    // On ne touche pas à l'auteur sélectionné pour éviter de casser l'auto-sélection.
+    setEditorResetKey((prev) => prev + 1);
+  };
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold">Nouvel article</h1>
-        <Link href="/articles" className="text-blue-600 hover:underline">
-          ← Liste des articles
+    <div className="mx-auto max-w-4xl px-6 py-8">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <Link href="/articles" className="text-sm font-medium text-rer-blue hover:underline">
+          ← Liste
         </Link>
+        <div className="flex flex-1 items-center justify-end gap-4 text-xs">
+          <span className="text-rer-muted">
+            {draftStatus === "saving"
+              ? "Brouillon…"
+              : draftStatus === "saved"
+              ? "Brouillon enregistré"
+              : draftStatus === "error"
+              ? "Brouillon en erreur"
+              : ""}
+          </span>
+          <div className="flex items-center gap-3">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".docx"
+              className="hidden"
+              onChange={onFileChange}
+            />
+            <button
+              type="button"
+              onClick={handleImportWord}
+              disabled={importing}
+              className="rounded-full border border-rer-border bg-white px-3 py-1 text-[11px] font-medium text-rer-blue hover:bg-rer-app disabled:opacity-50"
+            >
+              {importing ? "Import Word…" : "Importer un Word"}
+            </button>
+            {draftId && draftStatus === "saved" && (
+              <button
+                type="button"
+                onClick={handleIgnoreDraft}
+                className="inline-flex items-center rounded-full border border-red-200 bg-red-50 px-3 py-1 text-[11px] font-medium text-red-600 hover:bg-red-100"
+              >
+                Ignorer ce brouillon
+              </button>
+            )}
+          </div>
+        </div>
       </div>
-
-      <div className="mb-4">
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".docx"
-          className="hidden"
-          onChange={onFileChange}
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <ArticleEditorCard
+          mode="create"
+          value={{
+            formatId,
+            rubriqueId,
+            auteurId,
+            mutuelleId,
+            lienPhoto,
+            legendePhoto,
+            titre,
+            contenuHtml,
+            contenuJson,
+            postRs,
+          }}
+          referentiels={ref}
+          onChange={(patch: Partial<ArticleEditorValue>) => {
+            if (patch.formatId !== undefined) setFormatId(patch.formatId);
+            if (patch.rubriqueId !== undefined) setRubriqueId(patch.rubriqueId);
+            if (patch.auteurId !== undefined) setAuteurId(patch.auteurId);
+            if (patch.mutuelleId !== undefined) setMutuelleId(patch.mutuelleId || "");
+            if (patch.lienPhoto !== undefined) setLienPhoto(patch.lienPhoto ?? null);
+            if (patch.legendePhoto !== undefined) setLegendePhoto(patch.legendePhoto || "");
+            if (patch.titre !== undefined) setTitre(patch.titre);
+            if (patch.contenuHtml !== undefined) setContenuHtml(patch.contenuHtml);
+            if (patch.contenuJson !== undefined) setContenuJson(patch.contenuJson ?? null);
+            if (patch.postRs !== undefined) setPostRs(patch.postRs || "");
+          }}
+          onUploadMainImage={performMainImageUpload}
+          editorKey={editorResetKey}
         />
-        <button
-          type="button"
-          onClick={handleImportWord}
-          disabled={importing}
-          className="px-4 py-2 bg-slate-700 text-white rounded hover:bg-slate-600 disabled:opacity-50"
-        >
-          {importing ? "Import en cours…" : "Importer un Word"}
-        </button>
-      </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium mb-1">Titre *</label>
-          <input
-            type="text"
-            value={titre}
-            onChange={(e) => setTitre(e.target.value)}
-            required
-            className="w-full border rounded px-3 py-2"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Chapô</label>
-          <textarea
-            value={chapo}
-            onChange={(e) => setChapo(e.target.value)}
-            rows={2}
-            className="w-full border rounded px-3 py-2"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Contenu *</label>
-          <RichArticleEditor
-            initialHtml={contenuHtml}
-            onChange={({ json, html }) => {
-              setContenuJson(json);
-              setContenuHtml(html);
-            }}
-          />
-          {signesRef != null && (
-            <p className="text-sm text-gray-500 mt-1">
-              Signes : {signesCount} {signesRef ? `(réf. ${signesRef})` : ""}
-            </p>
-          )}
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Auteur *</label>
-          <select
-            value={auteurId}
-            onChange={(e) => setAuteurId(e.target.value)}
-            required
-            className="w-full border rounded px-3 py-2"
-          >
-            {ref.auteurs.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.prenom} {a.nom}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Mutuelle</label>
-          <select
-            value={mutuelleId}
-            onChange={(e) => setMutuelleId(e.target.value)}
-            className="w-full border rounded px-3 py-2"
-          >
-            <option value="">—</option>
-            {ref.mutuelles.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.nom}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Rubrique</label>
-          <select
-            value={rubriqueId}
-            onChange={(e) => setRubriqueId(e.target.value)}
-            className="w-full border rounded px-3 py-2"
-          >
-            <option value="">—</option>
-            {ref.rubriques.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.libelle}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Format</label>
-          <select
-            value={formatId}
-            onChange={(e) => setFormatId(e.target.value)}
-            className="w-full border rounded px-3 py-2"
-          >
-            <option value="">—</option>
-            {ref.formats.map((f) => (
-              <option key={f.id} value={f.id}>
-                {f.libelle}
-                {f.signesReference != null ? ` (${f.signesReference} signes)` : ""}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Légende photo</label>
-          <input
-            type="text"
-            value={legendePhoto}
-            onChange={(e) => setLegendePhoto(e.target.value)}
-            className="w-full border rounded px-3 py-2"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Post réseaux sociaux</label>
-          <textarea
-            value={postRs}
-            onChange={(e) => setPostRs(e.target.value)}
-            rows={2}
-            className="w-full border rounded px-3 py-2"
-          />
-        </div>
-        <div className="flex gap-3 pt-4">
+        <div className="flex gap-3 pt-2">
           <button
             type="submit"
             disabled={submitStatus === "sending"}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+            className="rounded-full bg-blue-600 px-5 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
           >
             {submitStatus === "sending" ? "Envoi…" : "Créer l’article"}
           </button>
           {submitStatus === "ok" && (
-            <span className="text-green-600">Article déposé (état « À relire »).</span>
+            <span className="text-sm text-green-600">
+              Article déposé (état « À relire »).
+            </span>
           )}
           {submitStatus === "error" && (
-            <span className="text-red-600">Erreur lors de l’envoi.</span>
+            <span className="text-sm text-red-600">Erreur lors de l’envoi.</span>
           )}
         </div>
       </form>

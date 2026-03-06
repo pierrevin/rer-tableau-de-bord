@@ -5,7 +5,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ingestDebug } from "@/lib/ingest-debug";
 import { getEtatBadgeClasses } from "../articles/ArticlesCardsExplorer";
-import RichArticleEditor from "../components/RichArticleEditor";
+import ArticleEditorCard, {
+  ArticleEditorReferentiels,
+  ArticleEditorValue,
+} from "../components/ArticleEditorCard";
 
 type ArticleSummary = {
   id: string;
@@ -58,6 +61,8 @@ type ArticleDetail = {
   }[];
 };
 
+type AdminReferentiels = ArticleEditorReferentiels;
+
 type AuteurOption = {
   id: string;
   prenom: string;
@@ -90,6 +95,8 @@ function AdminArticlePanel({
   error,
   etats,
   onEtatUpdated,
+  listCollapsed,
+  onToggleListCollapsed,
 }: {
   selectedId: string;
   selectedArticle: ArticleSummary | null;
@@ -98,6 +105,8 @@ function AdminArticlePanel({
   error: string | null;
   etats: Etat[];
   onEtatUpdated: (etatSlug: string | null) => void;
+  listCollapsed: boolean;
+  onToggleListCollapsed: () => void;
 }) {
   const router = useRouter();
   const [updatingEtat, setUpdatingEtat] = useState(false);
@@ -107,12 +116,18 @@ function AdminArticlePanel({
   const [postRsDraft, setPostRsDraft] = useState("");
   const [auteursOptions, setAuteursOptions] = useState<AuteurOption[]>([]);
   const [auteurIdDraft, setAuteurIdDraft] = useState<string | null>(null);
+  const [ref, setRef] = useState<AdminReferentiels | null>(null);
+  const originalSnapshotRef = useRef<ArticleDetail | null>(null);
+  const [showDiff, setShowDiff] = useState(false);
 
   useEffect(() => {
     if (detail) {
       setTitleDraft(detail.titre);
       setPostRsDraft(detail.postRs ?? "");
       setAuteurIdDraft(detail.auteurId ?? null);
+      if (!originalSnapshotRef.current) {
+        originalSnapshotRef.current = detail;
+      }
     } else if (selectedArticle) {
       setTitleDraft(selectedArticle.titre);
     }
@@ -134,6 +149,23 @@ function AdminArticlePanel({
       cancelled = true;
     };
   }, [auteursOptions.length]);
+
+  useEffect(() => {
+    fetch("/api/referentiels")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!data) return;
+        setRef({
+          auteurs: data.auteurs,
+          mutuelles: data.mutuelles,
+          rubriques: data.rubriques,
+          formats: data.formats,
+        });
+      })
+      .catch(() => {
+        setRef(null);
+      });
+  }, []);
 
   const handleChangeEtat = async (targetEtatId: string) => {
     if (!detail || updatingEtat) return;
@@ -222,9 +254,9 @@ function AdminArticlePanel({
     }
   };
 
-  const handleSavePostRs = async () => {
+  const handleSavePostRs = async (nextValue: string) => {
     if (!detail) return;
-    const next = postRsDraft.trim();
+    const next = nextValue.trim();
     if ((detail.postRs ?? "") === next) return;
     setSavingMeta(true);
     try {
@@ -260,6 +292,52 @@ function AdminArticlePanel({
     }
   };
 
+  const performMainImageUpload = async (file: File) => {
+    if (!detail) return;
+    try {
+      const { uploadArticleImage } = await import("@/lib/uploadArticleImage");
+      const { publicUrl } = await uploadArticleImage({
+        file,
+        filename: file.name,
+        articleId: detail.id,
+      });
+      const res = await fetch(`/api/articles/${detail.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lienPhoto: publicUrl }),
+      });
+      if (!res.ok) {
+        console.error("Erreur lors de la mise à jour de l’image principale");
+      } else {
+        router.refresh();
+      }
+    } catch (e) {
+      console.error("Erreur lors de l’upload de l’image principale", e);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!detail && !selectedArticle) return;
+    const id = detail?.id ?? selectedId;
+    const titre = detail?.titre ?? selectedArticle?.titre ?? "cet article";
+    const confirmed = window.confirm(
+      `Voulez-vous vraiment supprimer « ${titre} » ? Cette action est définitive.`
+    );
+    if (!confirmed) return;
+    try {
+      const res = await fetch(`/api/articles/${id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        alert(err.error || "Erreur lors de la suppression.");
+        return;
+      }
+      router.push("/admin/articles");
+      router.refresh();
+    } catch {
+      alert("Erreur réseau lors de la suppression.");
+    }
+  };
+
   return (
     <div className="flex h-full flex-col">
       <div className="mb-3 flex items-start justify-between gap-3 border-b border-rer-border pb-3">
@@ -267,41 +345,24 @@ function AdminArticlePanel({
           <p className="text-[11px] font-semibold uppercase tracking-wide text-rer-muted">
             Mode relecture
           </p>
-          <textarea
-            className="w-full resize-none border-none bg-transparent p-0 text-lg font-semibold leading-snug text-rer-text focus:outline-none focus:ring-0"
-            rows={2}
-            value={titleDraft}
-            onChange={(e) => setTitleDraft(e.target.value)}
-            onBlur={handleSaveTitle}
-          />
-          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-rer-muted">
-            <select
-              className="min-w-[160px] rounded-full border border-rer-border bg-white px-2 py-0.5 text-xs text-rer-text"
-              value={auteurIdDraft ?? ""}
-              onChange={(e) => handleChangeAuteur(e.target.value)}
-            >
-              <option value="">Sélectionner…</option>
-              {auteursOptions.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.prenom} {a.nom}
-                  {a.mutuelle?.nom ? ` · ${a.mutuelle.nom}` : ""}
-                </option>
-              ))}
-            </select>
-            {savingMeta && (
-              <span className="text-[11px] text-rer-subtle">
-                Enregistrement…
-              </span>
-            )}
-          </div>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-xs">
-          <Link
-            href={`/articles/${selectedId}`}
-            className="inline-flex items-center rounded-full border border-rer-border bg-white px-3 py-1.5 text-xs font-medium text-rer-text hover:bg-rer-app/60"
+          <button
+            type="button"
+            onClick={handleDelete}
+            className="inline-flex items-center rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-100"
           >
-            Ouvrir en pleine page
-          </Link>
+            Supprimer
+          </button>
+          {detail && (
+            <button
+              type="button"
+              onClick={() => setShowDiff((v) => !v)}
+              className="inline-flex items-center rounded-full border border-rer-border bg-white px-3 py-1.5 text-xs font-medium text-rer-text hover:bg-rer-app"
+            >
+              {showDiff ? "Masquer les modifications" : "Afficher les modifications"}
+            </button>
+          )}
         </div>
       </div>
 
@@ -334,84 +395,164 @@ function AdminArticlePanel({
         <p className="mt-2 text-sm text-red-600">{error}</p>
       )}
 
-      {!loading && !error && detail && (
+      {!loading && !error && detail && ref && (
         <div className="mt-2 flex-1 space-y-4 overflow-y-auto pr-1 text-sm text-rer-text">
-          {detail && (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs text-rer-muted">
-                <span>Contenu de l’article</span>
-                {savingContent && <span>Enregistrement…</span>}
-              </div>
-              <RichArticleEditor
-                initialJson={detail.contenuJson ?? undefined}
-                initialHtml={buildInitialHtml}
-                onChange={async ({ json, html }) => {
-                  if (!detail || savingContent) return;
-                  setSavingContent(true);
-                  try {
-                    const { chapo, body } = extractChapoAndBody(html);
-                    ingestDebug({
-                      sessionId: "fb943b",
-                      runId: "pre-fix",
-                      hypothesisId: "H_AUTOSAVE_OR_ONCHANGE",
-                      location:
-                        "app/admin/AdminReviewExplorer.tsx:RichArticleEditor:onChange:beforeFetch",
-                      message: "Admin auto-save triggered",
-                      data: {
-                        articleId: detail.id,
-                        htmlLength: html.length,
-                        chapoPreview: chapo ? chapo.slice(0, 80) : null,
-                        bodyLength: body.length,
-                      },
-                    });
+          <div className="flex items-center justify-end text-[11px] text-rer-muted">
+            {savingContent ? "Enregistrement…" : "Enregistré"}
+          </div>
+          <ArticleEditorCard
+            mode="edit"
+            value={{
+              formatId: (detail as any).formatId ?? "",
+              rubriqueId: (detail as any).rubriqueId ?? "",
+              auteurId: detail.auteurId,
+              mutuelleId: detail.mutuelleId ?? undefined,
+              lienPhoto: detail.lienPhoto,
+              legendePhoto: detail.legendePhoto ?? "",
+              // On utilise le draft local pour rendre le titre vraiment éditable.
+              titre: titleDraft,
+              contenuHtml: buildInitialHtml,
+              contenuJson: detail.contenuJson ?? null,
+              postRs: postRsDraft,
+            }}
+            referentiels={ref}
+            onChange={async (patch: Partial<ArticleEditorValue>) => {
+              const payload: Record<string, any> = {};
+              if (patch.titre !== undefined) {
+                setTitleDraft(patch.titre);
+                payload.titre = patch.titre;
+              }
+              if (patch.postRs !== undefined) {
+                setPostRsDraft(patch.postRs || "");
+                payload.postRs = (patch.postRs || "").trim() || null;
+              }
+              if (patch.formatId !== undefined) {
+                payload.formatId = patch.formatId || null;
+              }
+              if (patch.rubriqueId !== undefined) {
+                payload.rubriqueId = patch.rubriqueId || null;
+              }
+              if (patch.auteurId !== undefined) {
+                setAuteurIdDraft(patch.auteurId);
+                payload.auteurId = patch.auteurId || null;
+              }
+              if (patch.mutuelleId !== undefined) {
+                payload.mutuelleId = patch.mutuelleId || null;
+              }
+              if (patch.lienPhoto !== undefined) {
+                payload.lienPhoto = patch.lienPhoto ?? null;
+              }
+              if (patch.legendePhoto !== undefined) {
+                payload.legendePhoto = patch.legendePhoto || null;
+              }
+              if (
+                patch.contenuHtml !== undefined ||
+                patch.contenuJson !== undefined
+              ) {
+                const html = patch.contenuHtml ?? buildInitialHtml;
+                const { chapo, body } = extractChapoAndBody(html);
+                payload.chapo = chapo;
+                payload.contenuHtml = body;
+                payload.contenuJson = patch.contenuJson ?? detail.contenuJson;
+              }
 
-                    const res = await fetch(`/api/articles/${detail.id}`, {
-                      method: "PATCH",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({
-                        chapo,
-                        contenuHtml: body,
-                        contenuJson: json,
-                      }),
-                    });
-                    if (!res.ok) {
-                      console.error("Erreur lors de la sauvegarde du contenu");
-                    }
-                    ingestDebug({
-                      sessionId: "fb943b",
-                      runId: "pre-fix",
-                      hypothesisId: "H_AUTOSAVE_OR_ONCHANGE",
-                      location:
-                        "app/admin/AdminReviewExplorer.tsx:RichArticleEditor:onChange:afterFetch",
-                      message: "Admin auto-save response",
-                      data: { articleId: detail.id, ok: res.ok, status: res.status },
-                    });
-                  } catch (e) {
-                    console.error(
-                      "Erreur lors de la sauvegarde du contenu",
-                      e
-                    );
-                  } finally {
-                    setSavingContent(false);
-                  }
-                }}
-              />
+              if (Object.keys(payload).length === 0) return;
+
+              setSavingContent(true);
+              try {
+                const res = await fetch(`/api/articles/${detail.id}`, {
+                  method: "PATCH",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify(payload),
+                });
+                if (!res.ok) {
+                  console.error("Erreur lors de la sauvegarde de l’article");
+                } else {
+                  router.refresh();
+                }
+              } catch (e) {
+                console.error("Erreur lors de la sauvegarde de l’article", e);
+              } finally {
+                setSavingContent(false);
+              }
+            }}
+            onUploadMainImage={performMainImageUpload}
+          />
+
+          {showDiff && originalSnapshotRef.current && (
+            <div className="space-y-2 rounded-md border border-dashed border-rer-border bg-rer-app/40 p-3 text-xs">
+              <p className="mb-1 font-semibold text-rer-muted">
+                Modifications par rapport à la version de référence
+              </p>
+              <div className="grid gap-2 md:grid-cols-2">
+                <div>
+                  <p className="font-medium text-rer-text">Titre</p>
+                  <p className="text-rer-muted line-through">
+                    {originalSnapshotRef.current.titre}
+                  </p>
+                  <p className="text-rer-text">{detail.titre}</p>
+                </div>
+                <div>
+                  <p className="font-medium text-rer-text">Format</p>
+                  <p className="text-rer-muted line-through">
+                    {originalSnapshotRef.current.format?.libelle ?? "—"}
+                  </p>
+                  <p className="text-rer-text">
+                    {detail.format?.libelle ?? "—"}
+                  </p>
+                </div>
+                <div>
+                  <p className="font-medium text-rer-text">Rubrique</p>
+                  <p className="text-rer-muted line-through">
+                    {originalSnapshotRef.current.rubrique?.libelle ?? "—"}
+                  </p>
+                  <p className="text-rer-text">
+                    {detail.rubrique?.libelle ?? "—"}
+                  </p>
+                </div>
+                <div>
+                  <p className="font-medium text-rer-text">Signature</p>
+                  <p className="text-rer-muted line-through">
+                    {originalSnapshotRef.current.auteur
+                      ? `${originalSnapshotRef.current.auteur.prenom} ${originalSnapshotRef.current.auteur.nom}`
+                      : "—"}
+                  </p>
+                  <p className="text-rer-text">
+                    {detail.auteur
+                      ? `${detail.auteur.prenom} ${detail.auteur.nom}`
+                      : "—"}
+                  </p>
+                </div>
+                <div>
+                  <p className="font-medium text-rer-text">Image principale</p>
+                  <p className="text-rer-muted line-through break-all">
+                    {originalSnapshotRef.current.lienPhoto ?? "—"}
+                  </p>
+                  <p className="text-rer-text break-all">
+                    {detail.lienPhoto ?? "—"}
+                  </p>
+                </div>
+                <div>
+                  <p className="font-medium text-rer-text">Post réseaux sociaux</p>
+                  <p className="text-rer-muted line-through">
+                    {originalSnapshotRef.current.postRs ?? "—"}
+                  </p>
+                  <p className="text-rer-text">{detail.postRs ?? "—"}</p>
+                </div>
+              </div>
+              <div>
+                <p className="font-medium text-rer-text">Texte (aperçu)</p>
+                <p className="text-rer-muted line-through">
+                  {(originalSnapshotRef.current.contenu ?? "").slice(0, 160)}
+                  {(originalSnapshotRef.current.contenu ?? "").length > 160 ? "…" : ""}
+                </p>
+                <p className="text-rer-text">
+                  {(detail.contenu ?? "").slice(0, 160)}
+                  {(detail.contenu ?? "").length > 160 ? "…" : ""}
+                </p>
+              </div>
             </div>
           )}
-
-          <div className="space-y-1">
-            <label className="text-xs text-rer-muted">
-              Post réseaux sociaux (optionnel)
-            </label>
-            <textarea
-              className="w-full rounded-md border border-rer-border px-2 py-1 text-sm text-rer-text shadow-sm focus:border-rer-blue focus:outline-none focus:ring-1 focus:ring-rer-blue"
-              rows={3}
-              value={postRsDraft}
-              onChange={(e) => setPostRsDraft(e.target.value)}
-              onBlur={handleSavePostRs}
-              placeholder="Texte court prêt à être copié-collé pour les réseaux sociaux…"
-            />
-          </div>
 
           <div className="space-y-1 rounded-md bg-rer-app p-2 text-xs">
             <p className="font-semibold text-rer-muted">
@@ -468,10 +609,17 @@ export function AdminReviewExplorer({
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [visibleArticles, setVisibleArticles] =
-    useState<ArticleSummary[]>(articles);
+  const getSortTime = (a: ArticleSummary) => {
+    const refDate = a.dateDepot ?? a.createdAt;
+    if (!refDate) return 0;
+    return new Date(refDate).getTime();
+  };
+
+  const [visibleArticles, setVisibleArticles] = useState<ArticleSummary[]>(
+    () => [...articles].sort((a, b) => getSortTime(b) - getSortTime(a))
+  );
   const [selectedId, setSelectedId] = useState<string | null>(
-    initialSelectedId || (articles[0]?.id ?? null)
+    initialSelectedId || (visibleArticles[0]?.id ?? null)
   );
   const [detail, setDetail] = useState<ArticleDetail | null>(null);
   const [loading, setLoading] = useState(false);
@@ -480,16 +628,21 @@ export function AdminReviewExplorer({
   const [loadingMore, setLoadingMore] = useState(false);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const currentPageRef = useRef(initialPage);
+  const [bulkMode, setBulkMode] = useState(false);
+  const [selectedBulkIds, setSelectedBulkIds] = useState<string[]>([]);
+  const [listCollapsed, setListCollapsed] = useState(false);
 
+  // Met à jour la liste quand les props changent
   useEffect(() => {
-    setVisibleArticles(articles);
+    const sorted = [...articles].sort((a, b) => getSortTime(b) - getSortTime(a));
+    setVisibleArticles(sorted);
     setHasMore(articles.length < total);
     currentPageRef.current = initialPage;
     setSelectedId((prev) => {
-      if (prev && articles.some((a) => a.id === prev)) {
+      if (prev && sorted.some((a) => a.id === prev)) {
         return prev;
       }
-      return initialSelectedId || (articles[0]?.id ?? null);
+      return initialSelectedId || (sorted[0]?.id ?? null);
     });
   }, [articles, total, initialPage, initialSelectedId]);
 
@@ -531,7 +684,7 @@ export function AdminReviewExplorer({
         const merged = [
           ...prev,
           ...newArticles.filter((a) => !existingIds.has(a.id)),
-        ];
+        ].sort((a, b) => getSortTime(b) - getSortTime(a));
         if (merged.length >= data.total) {
           setHasMore(false);
         }
@@ -548,6 +701,7 @@ export function AdminReviewExplorer({
     }
   };
 
+  // Chargement du détail de l’article sélectionné
   useEffect(() => {
     if (!selectedId) {
       setDetail(null);
@@ -658,6 +812,7 @@ export function AdminReviewExplorer({
     });
   };
 
+  // Scroll infini
   useEffect(() => {
     if (!hasMore) return;
     const node = sentinelRef.current;
@@ -680,6 +835,53 @@ export function AdminReviewExplorer({
   }, [hasMore, loadingMore]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const sortedEtats = [...etats].sort((a, b) => a.ordre - b.ordre);
+
+  function toggleBulkSelection(id: string) {
+    setSelectedBulkIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  }
+
+  function toggleBulkAll() {
+    if (selectedBulkIds.length === visibleArticles.length) {
+      setSelectedBulkIds([]);
+    } else {
+      setSelectedBulkIds(visibleArticles.map((a) => a.id));
+    }
+  }
+
+  async function handleBulkDelete() {
+    if (!selectedBulkIds.length) {
+      return;
+    }
+    const confirmed = window.confirm(
+      `Supprimer définitivement ${selectedBulkIds.length} article(s) sélectionné(s) ?`
+    );
+    if (!confirmed) {
+      return;
+    }
+    try {
+      await Promise.all(
+        selectedBulkIds.map((id) =>
+          fetch(`/api/articles/${id}`, { method: "DELETE" })
+        )
+      );
+      const remaining = visibleArticles.filter(
+        (a) => !selectedBulkIds.includes(a.id)
+      );
+      setVisibleArticles(remaining);
+      if (selectedId && selectedBulkIds.includes(selectedId)) {
+        const nextId = remaining[0]?.id ?? null;
+        setSelectedId(nextId);
+        updateUrl({ article: nextId });
+      }
+      setBulkMode(false);
+      setSelectedBulkIds([]);
+      router.refresh();
+    } catch {
+      alert("Erreur réseau lors de la suppression en masse.");
+    }
+  }
 
   return (
     <>
@@ -722,22 +924,66 @@ export function AdminReviewExplorer({
         </button>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,2fr)]">
-        <div className="max-h-[calc(100vh-140px)] space-y-2 overflow-y-auto px-2 py-2">
-          {visibleArticles.length === 0 ? (
+      <div
+        className={`grid gap-4 ${
+          listCollapsed
+            ? "lg:grid-cols-[64px_minmax(0,1fr)]"
+            : "lg:grid-cols-[minmax(0,1.3fr)_minmax(0,2fr)]"
+        }`}
+      >
+        <div
+          className="max-h-[calc(100vh-140px)] space-y-2 overflow-y-auto px-2 py-2 transition-all"
+        >
+          <div className="mb-2 flex items-center justify-between text-[11px] text-rer-muted">
+            {!listCollapsed && (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (bulkMode) {
+                      setBulkMode(false);
+                      setSelectedBulkIds([]);
+                    } else {
+                      setBulkMode(true);
+                    }
+                  }}
+                  className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-medium ${
+                    bulkMode
+                      ? "border-rer-blue bg-rer-blue text-white"
+                      : "border-rer-border bg-white text-rer-text hover:bg-rer-app"
+                  }`}
+                >
+                  Sélection multiple
+                </button>
+                {bulkMode && (
+                  <span>
+                    {selectedBulkIds.length
+                      ? `${selectedBulkIds.length} article(s) sélectionné(s)`
+                      : "Cliquez sur un article pour le sélectionner"}
+                  </span>
+                )}
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => setListCollapsed((v) => !v)}
+              className="inline-flex items-center rounded-full border border-rer-border bg-white px-2 py-1 text-[10px] font-medium text-rer-text hover:bg-rer-app"
+            >
+              {listCollapsed ? "▶ Liste" : "◀ Liste"}
+            </button>
+          </div>
+          {!listCollapsed && visibleArticles.length === 0 ? (
             <p className="rounded-md bg-white px-3 py-6 text-center text-sm text-rer-muted shadow-sm ring-1 ring-rer-border">
               Aucun article ne correspond à ces critères. Essayez d&apos;élargir
               votre recherche ou de modifier les filtres.
             </p>
-          ) : (
+          ) : !listCollapsed ? (
             <>
               {visibleArticles.map((article) => {
                 const isSelected = article.id === selectedId;
+                const isBulkSelected = selectedBulkIds.includes(article.id);
                 const ageLabel = (() => {
-                  const refDate =
-                    article.datePublication ??
-                    article.dateDepot ??
-                    article.createdAt;
+                      const refDate = article.dateDepot ?? article.createdAt;
                   if (!refDate) return "";
                   const d = new Date(refDate);
                   const diff = Date.now() - d.getTime();
@@ -751,14 +997,27 @@ export function AdminReviewExplorer({
                   <button
                     key={article.id}
                     type="button"
-                    onClick={() => handleSelect(article.id)}
+                    onClick={() =>
+                      bulkMode
+                        ? toggleBulkSelection(article.id)
+                        : handleSelect(article.id)
+                    }
                     aria-pressed={isSelected}
-                    className={`flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2 text-left text-xs transition-colors ${
-                      isSelected
+                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-xs transition-colors ${
+                      isSelected && !bulkMode
                         ? "bg-rer-blue/5 ring-1 ring-rer-blue"
                         : "bg-white hover:bg-rer-app hover:ring-1 hover:ring-rer-border"
                     }`}
                   >
+                    {bulkMode && (
+                      <span
+                        className={`h-2.5 w-2.5 rounded-full border ${
+                          isBulkSelected
+                            ? "border-rer-blue bg-rer-blue"
+                            : "border-rer-border bg-white"
+                        }`}
+                      />
+                    )}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         {article.etat && (
@@ -783,13 +1042,18 @@ export function AdminReviewExplorer({
                     </div>
                     <div className="flex flex-col items-end gap-1 text-[10px] text-rer-subtle">
                       <span>{ageLabel}</span>
+                      {bulkMode && isBulkSelected && (
+                        <span className="mt-0.5 rounded-full bg-rer-blue/10 px-2 py-0.5 text-[10px] text-rer-blue">
+                          Sélectionné
+                        </span>
+                      )}
                     </div>
                   </button>
                 );
               })}
               <div ref={sentinelRef} className="h-6 lg:h-8" />
             </>
-          )}
+          ) : null}
         </div>
 
         <div className="hidden min-h-[260px] flex-col rounded-xl bg-white p-4 shadow-sm ring-1 ring-rer-border lg:flex">
@@ -808,6 +1072,8 @@ export function AdminReviewExplorer({
               error={error}
               etats={etats}
               onEtatUpdated={handleEtatUpdated}
+              listCollapsed={listCollapsed}
+              onToggleListCollapsed={() => setListCollapsed((v) => !v)}
             />
           )}
         </div>

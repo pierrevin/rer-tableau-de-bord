@@ -1,12 +1,19 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import { ingestDebug } from "@/lib/ingest-debug";
-import { BubbleMenu } from "@tiptap/react/menus";
+import { BubbleMenu, FloatingMenu } from "@tiptap/react/menus";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
 import Paragraph from "@tiptap/extension-paragraph";
+import Image from "@tiptap/extension-image";
+type UploadResponse = {
+  path: string;
+  token: string;
+  key: string;
+  publicUrl: string | null;
+};
 
 type RichArticleEditorProps = {
   /**
@@ -17,6 +24,10 @@ type RichArticleEditorProps = {
    * Contenu initial au format HTML (fallback / compatibilité).
    */
   initialHtml?: string | null;
+  /**
+   * Identifiant d’article (facultatif, pour ranger les images par article).
+   */
+  articleId?: string;
   /**
    * Mode lecture seule.
    */
@@ -29,15 +40,26 @@ type RichArticleEditorProps = {
    * Classes supplémentaires pour le conteneur externe.
    */
   className?: string;
+  /**
+   * Affichage du "chrome" (carte, bordure, padding).
+   * - default: carte blanche intégrée (comportement historique)
+   * - none: rendu nu, utile si le parent fournit déjà la carte
+   */
+  chrome?: "default" | "none";
 };
 
 export function RichArticleEditor({
   initialJson,
   initialHtml,
+  articleId,
   readOnly = false,
   onChange,
   className = "",
+  chrome = "default",
 }: RichArticleEditorProps) {
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const isNormalizingRef = useRef(false);
+
   const editor = useEditor({
     extensions: [
       Paragraph.extend({
@@ -60,10 +82,26 @@ export function RichArticleEditor({
         heading: {
           levels: [2, 3],
         },
+        link: false,
       }),
       Link.configure({
         openOnClick: false,
         linkOnPaste: true,
+      }),
+      Image.extend({
+        addAttributes() {
+          return {
+            ...(this.parent?.() || {}),
+            class: {
+              default: null,
+              parseHTML: (element) => element.getAttribute("class"),
+              renderHTML: (attributes) => {
+                if (!attributes.class) return {};
+                return { class: attributes.class };
+              },
+            },
+          };
+        },
       }),
     ],
     content: initialJson ?? initialHtml ?? "",
@@ -74,6 +112,119 @@ export function RichArticleEditor({
     immediatelyRender: false,
     onUpdate: ({ editor }) => {
       if (!onChange) return;
+
+      if (!readOnly) {
+        const { doc, schema } = editor.state;
+        const inserts: number[] = [];
+        const chapoRemovals: { pos: number; node: any }[] = [];
+        let firstParagraphPos: number | null = null;
+        let firstParagraphNode: any = null;
+        let firstParagraphHasChapo = false;
+
+        doc.descendants((node, pos) => {
+          // Normalisation légende d'image
+          if (node.type.name === "image") {
+            const classAttr = (node.attrs as any)?.class as string | null | undefined;
+            const hasArticleImageClass = (classAttr ?? "")
+              .split(" ")
+              .map((c) => c.trim())
+              .filter(Boolean)
+              .includes("article-image");
+            if (!hasArticleImageClass) return;
+
+            const afterPos = pos + node.nodeSize;
+            const afterNode = doc.nodeAt(afterPos);
+            const afterClass = (afterNode?.attrs as any)?.class as string | null | undefined;
+            const afterHasCaptionClass = (afterClass ?? "")
+              .split(" ")
+              .map((c) => c.trim())
+              .filter(Boolean)
+              .includes("image-caption");
+
+            if (!afterNode || afterNode.type.name !== "paragraph" || !afterHasCaptionClass) {
+              inserts.push(afterPos);
+            }
+            return;
+          }
+
+          // Repérage des paragraphes / chapô
+          if (node.type.name === "paragraph") {
+            if (firstParagraphPos === null) {
+              firstParagraphPos = pos;
+              firstParagraphNode = node;
+            }
+            const classAttr = (node.attrs as any)?.class as string | null | undefined;
+            const classes = (classAttr ?? "")
+              .split(" ")
+              .map((c) => c.trim())
+              .filter(Boolean);
+            const isChapo = classes.includes("chapo");
+
+            if (isChapo && firstParagraphPos === pos) {
+              firstParagraphHasChapo = true;
+            } else if (isChapo && firstParagraphPos !== pos) {
+              chapoRemovals.push({ pos, node });
+            }
+          }
+        });
+
+        if (!isNormalizingRef.current) {
+          const tr = editor.state.tr;
+
+          // Insérer les légendes manquantes
+          for (let i = inserts.length - 1; i >= 0; i--) {
+            tr.insert(
+              inserts[i],
+              schema.nodes.paragraph.create({ class: "image-caption" })
+            );
+          }
+
+          // Si aucun paragraphe n'a de chapô, on applique sur le premier
+          if (
+            firstParagraphPos !== null &&
+            firstParagraphNode &&
+            !firstParagraphHasChapo
+          ) {
+            const existingClass: string =
+              ((firstParagraphNode.attrs as any)?.class as string | null | undefined) || "";
+            const classes = existingClass
+              .split(" ")
+              .map((c) => c.trim())
+              .filter(Boolean);
+            if (!classes.includes("chapo")) {
+              const nextClasses = [...classes, "chapo"];
+              tr.setNodeMarkup(firstParagraphPos, undefined, {
+                ...(firstParagraphNode.attrs as any),
+                class: nextClasses.join(" "),
+              });
+            }
+          }
+
+          // On retire "chapo" des autres paragraphes
+          for (const { pos, node } of chapoRemovals) {
+            const classAttr = (node.attrs as any)?.class as string | null | undefined;
+            const classes = (classAttr ?? "")
+              .split(" ")
+              .map((c) => c.trim())
+              .filter(Boolean)
+              .filter((c) => c !== "chapo");
+            tr.setNodeMarkup(pos, undefined, {
+              ...(node.attrs as any),
+              class: classes.join(" "),
+            });
+          }
+
+          if (tr.steps.length > 0) {
+            isNormalizingRef.current = true;
+            editor.view.dispatch(tr);
+            return;
+          }
+        }
+
+        if (isNormalizingRef.current) {
+          isNormalizingRef.current = false;
+        }
+      }
       const json = editor.getJSON();
       const html = editor.getHTML();
 
@@ -86,6 +237,21 @@ export function RichArticleEditor({
         data: { htmlLength: html.length },
       });
 
+      // #region agent log
+      ingestDebug({
+        sessionId: "a34272",
+        runId: "pre-fix",
+        hypothesisId: "H_IMG_SCHEMA",
+        location: "app/components/RichArticleEditor.tsx:onUpdate",
+        message: "RichArticleEditor onUpdate snapshot",
+        data: {
+          htmlLength: html.length,
+          hasImgTag: html.includes("<img"),
+          hasFigureTag: html.includes("<figure"),
+        },
+      });
+      // #endregion
+
       onChange({ json, html });
     },
   });
@@ -95,39 +261,137 @@ export function RichArticleEditor({
     editor.setEditable(!readOnly);
   }, [editor, readOnly]);
 
-  if (!editor) return null;
+  if (!editor || (editor as any).isDestroyed) return null;
 
   const baseButtonClasses =
     "inline-flex items-center justify-center rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors";
 
-  const handleInsertImage = () => {
+  const insertBlockAtSlash = (html: string) => {
     if (!editor) return;
-    const url = window.prompt("URL de l’image à insérer");
-    if (!url) return;
-    const caption = window.prompt("Légende (optionnelle)") ?? "";
-    const safeUrl = url.trim();
-    if (!safeUrl) return;
+    const { state } = editor;
+    const { from } = state.selection;
     editor
       .chain()
       .focus()
-      .insertContent(
-        `<figure><img src="${safeUrl}" alt="${caption ?? ""}" />${
-          caption ? `<figcaption>${caption}</figcaption>` : ""
-        }</figure>`
-      )
+      // On supprime le « / » de déclenchement juste avant le curseur
+      .deleteRange({ from: Math.max(from - 1, 0), to: from })
+      .insertContent(html)
       .run();
   };
 
-  const handleInsertSocial = () => {
+  const applyHeadingFromSlash = (level: 2 | 3) => {
     if (!editor) return;
-    const url = window.prompt("URL du post réseaux sociaux (Twitter, LinkedIn…)") ?? "";
-    const safeUrl = url.trim();
-    if (!safeUrl) return;
+    const { state } = editor;
+    const { from } = state.selection;
     editor
       .chain()
       .focus()
-      .insertContent(`<p class="social-embed">${safeUrl}</p>`)
+      .deleteRange({ from: Math.max(from - 1, 0), to: from })
+      .toggleHeading({ level })
       .run();
+  };
+
+  const applyBlockquoteFromSlash = () => {
+    if (!editor) return;
+    const { state } = editor;
+    const { from } = state.selection;
+    editor
+      .chain()
+      .focus()
+      .deleteRange({ from: Math.max(from - 1, 0), to: from })
+      .toggleBlockquote()
+      .run();
+  };
+
+  const handleInsertImage = () => {
+    if (!editor) return;
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !editor) return;
+
+    try {
+      // #region agent log
+      ingestDebug({
+        sessionId: "a34272",
+        runId: "pre-fix",
+        hypothesisId: "H_IMG_UPLOAD_FLOW",
+        location: "app/components/RichArticleEditor.tsx:handleFileChange:start",
+        message: "handleFileChange called",
+        data: {
+          fileName: file.name,
+          fileSize: file.size,
+          articleId: articleId ?? null,
+        },
+      });
+      // #endregion
+
+      const { uploadArticleImage } = await import("@/lib/uploadArticleImage");
+      const { publicUrl } = await uploadArticleImage({
+        file,
+        filename: file.name,
+        articleId: articleId ?? null,
+      });
+
+      // #region agent log
+      ingestDebug({
+        sessionId: "a34272",
+        runId: "pre-fix",
+        hypothesisId: "H_IMG_UPLOAD_FLOW",
+        location:
+          "app/components/RichArticleEditor.tsx:handleFileChange:beforeInsert",
+        message: "Inserting image into editor",
+        data: {
+          hasImgUrl: !!publicUrl,
+          imgUrlLength: publicUrl.length,
+        },
+      });
+      // #endregion
+
+      editor
+        .chain()
+        .focus()
+        .insertContent(
+          `<img src="${publicUrl}" alt="" class="article-image" /><p class="image-caption"></p>`
+        )
+        .run();
+    } catch (error) {
+      console.error(error);
+      const message =
+        error instanceof Error && error.message
+          ? error.message
+          : "Erreur lors du traitement de l’image.";
+      alert(message);
+    }
+  };
+
+  const handleInsertSocialPost = () => {
+    insertBlockAtSlash(
+      `<section class="social-post"><div class="social-post-label">POST RÉSEAUX SOCIAUX</div><p>Texte du post réseaux sociaux…</p></section>`
+    );
+  };
+
+  const handleInsertEmbed = () => {
+    if (!editor) return;
+    const input = window.prompt("URL ou code d’embed (iframe)…") ?? "";
+    const safeValue = input.trim();
+    if (!safeValue) return;
+
+    // Si l'utilisateur colle directement un <iframe>, on essaie d'en extraire l'URL.
+    let url = safeValue;
+    if (safeValue.toLowerCase().includes("<iframe")) {
+      const match = safeValue.match(/src=["']([^"']+)["']/i);
+      if (match?.[1]) {
+        url = match[1];
+      }
+    }
+
+    insertBlockAtSlash(
+      `<figure class="embed-block"><p class="embed-url">${url}</p></figure>`
+    );
   };
 
   const handleSetLink = () => {
@@ -175,98 +439,81 @@ export function RichArticleEditor({
 
   return (
     <div
-      className={`rounded-xl border border-rer-border bg-white px-3 py-2 text-sm text-rer-text shadow-sm ${className}`}
+      className={
+        chrome === "none"
+          ? className
+          : `rounded-xl border border-rer-border bg-white px-3 py-2 text-sm text-rer-text shadow-sm ${className}`
+      }
     >
       {!readOnly && (
-        <div className="mb-2 flex flex-wrap gap-1 text-xs">
-          <button
-            type="button"
-            onClick={() => editor.chain().focus().toggleBold().run()}
-            className={`${baseButtonClasses} ${
-              editor.isActive("bold")
-                ? "bg-rer-blue text-white border-rer-blue"
-                : "bg-white text-rer-text border-rer-border hover:bg-rer-app"
-            }`}
-          >
-            B
-          </button>
-          <button
-            type="button"
-            onClick={() => editor.chain().focus().toggleItalic().run()}
-            className={`${baseButtonClasses} ${
-              editor.isActive("italic")
-                ? "bg-rer-blue text-white border-rer-blue"
-                : "bg-white text-rer-text border-rer-border hover:bg-rer-app"
-            }`}
-          >
-            I
-          </button>
-          <button
-            type="button"
-            onClick={() =>
-              editor.chain().focus().toggleHeading({ level: 2 }).run()
+        <FloatingMenu
+          editor={editor}
+          shouldShow={({ state }) => {
+            try {
+              const { $from } = state.selection;
+              // Afficher le menu d’insertion uniquement sur un paragraphe contenant
+              // un « / » seul, pour un comportement type slash‑menu.
+              const text = ($from.parent.textContent ?? "").trim();
+              return (
+                state.selection.empty &&
+                $from.parent.type.name === "paragraph" &&
+                text === "/"
+              );
+            } catch {
+              return false;
             }
-            className={`${baseButtonClasses} ${
-              editor.isActive("heading", { level: 2 })
-                ? "bg-rer-blue text-white border-rer-blue"
-                : "bg-white text-rer-text border-rer-border hover:bg-rer-app"
-            }`}
+          }}
+          tippyOptions={{
+            placement: "left",
+            offset: [0, 8],
+            duration: 120,
+            maxWidth: "none",
+          }}
+          className="flex items-center gap-1 rounded-full border border-rer-border bg-white px-2 py-1 text-[11px] text-rer-muted shadow-sm"
+        >
+          <button
+            type="button"
+            onClick={handleInsertImage}
+            className="inline-flex items-center rounded-full border border-dashed border-rer-border px-2 py-1 hover:bg-rer-app"
+          >
+            + Image
+          </button>
+          <button
+            type="button"
+            onClick={handleInsertEmbed}
+            className="inline-flex items-center rounded-full border border-dashed border-rer-border px-2 py-1 hover:bg-rer-app"
+          >
+            + Embed
+          </button>
+          <span className="mx-1 h-4 w-px bg-rer-border/60" />
+          <button
+            type="button"
+            onClick={() => applyHeadingFromSlash(2)}
+            className="inline-flex items-center rounded-full border border-rer-border px-2 py-1 text-[10px] font-semibold text-rer-text hover:bg-rer-app"
           >
             H2
           </button>
           <button
             type="button"
-            onClick={() =>
-              editor.chain().focus().toggleHeading({ level: 3 }).run()
-            }
-            className={`${baseButtonClasses} ${
-              editor.isActive("heading", { level: 3 })
-                ? "bg-rer-blue text-white border-rer-blue"
-                : "bg-white text-rer-text border-rer-border hover:bg-rer-app"
-            }`}
+            onClick={() => applyHeadingFromSlash(3)}
+            className="inline-flex items-center rounded-full border border-rer-border px-2 py-1 text-[10px] font-semibold text-rer-text hover:bg-rer-app"
           >
             H3
           </button>
           <button
             type="button"
-            onClick={() => editor.chain().focus().toggleBulletList().run()}
-            className={`${baseButtonClasses} ${
-              editor.isActive("bulletList")
-                ? "bg-rer-blue text-white border-rer-blue"
-                : "bg-white text-rer-text border-rer-border hover:bg-rer-app"
-            }`}
-          >
-            Liste
-          </button>
-          <button
-            type="button"
-            onClick={() => editor.chain().focus().toggleBlockquote().run()}
-            className={`${baseButtonClasses} ${
-              editor.isActive("blockquote")
-                ? "bg-rer-blue text-white border-rer-blue"
-                : "bg-white text-rer-text border-rer-border hover:bg-rer-app"
-            }`}
+            onClick={applyBlockquoteFromSlash}
+            className="inline-flex items-center rounded-full border border-rer-border px-2 py-1 text-[10px] text-rer-text hover:bg-rer-app"
           >
             Citation
           </button>
-          <button
-            type="button"
-            onClick={handleToggleChapo}
-            className={`${baseButtonClasses} ${
-              editor.isActive("paragraph", { class: "chapo" })
-                ? "bg-rer-blue text-white border-rer-blue"
-                : "bg-white text-rer-text border-rer-border hover:bg-rer-app"
-            }`}
-          >
-            Chapô
-          </button>
-        </div>
+        </FloatingMenu>
       )}
 
       {!readOnly && (
         <BubbleMenu
           editor={editor}
-          className="flex gap-1 rounded-full bg-rer-text px-3 py-1.5 text-[12px] text-white shadow-md"
+          className="flex items-center gap-1 rounded-full border border-rer-border bg-white px-3 py-1.5 text-[12px] text-rer-text shadow-lg"
         >
           <button
             type="button"
@@ -335,22 +582,14 @@ export function RichArticleEditor({
       </div>
 
       {!readOnly && (
-        <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-rer-muted">
-          <button
-            type="button"
-            onClick={handleInsertImage}
-            className="inline-flex items-center rounded-full border border-dashed border-rer-border px-2.5 py-1 hover:bg-rer-app"
-          >
-            + Image
-          </button>
-          <button
-            type="button"
-            onClick={handleInsertSocial}
-            className="inline-flex items-center rounded-full border border-dashed border-rer-border px-2.5 py-1 hover:bg-rer-app"
-          >
-            + Post réseaux sociaux
-          </button>
-        </div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleFileChange}
+          aria-hidden
+        />
       )}
     </div>
   );
