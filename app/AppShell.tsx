@@ -26,8 +26,8 @@ export function AppShell({ children }: AppShellProps) {
     <div className="flex min-h-screen flex-col">
       <header className="border-b border-rer-border bg-white/90 backdrop-blur">
         <div className="mx-auto max-w-6xl px-4 py-3">
-          <div className="flex items-center justify-between gap-4">
-            <Link href="/" className="flex items-center gap-3">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <Link href="/" className="flex min-w-0 items-center gap-3">
               <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full border border-rer-border bg-white">
                 {!logoUnavailable ? (
                   <Image
@@ -45,14 +45,16 @@ export function AppShell({ children }: AppShellProps) {
                   </div>
                 )}
               </div>
-              <div className="flex flex-col">
-                <span className="text-base font-semibold text-rer-text">
+              <div className="min-w-0 flex flex-col">
+                <span className="truncate text-sm font-semibold text-rer-text sm:text-base">
                   Base de données d’articles
                 </span>
               </div>
             </Link>
-            <div className="flex items-center gap-4">
-              <AppMainNav />
+            <div className="flex w-full min-w-0 flex-wrap items-center justify-between gap-2 lg:w-auto lg:flex-nowrap lg:justify-end lg:gap-4">
+              <div className="min-w-0 max-w-full overflow-x-auto pb-1 lg:overflow-visible lg:pb-0">
+                <AppMainNav />
+              </div>
               <AppUserStatus />
             </div>
           </div>

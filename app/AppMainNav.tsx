@@ -17,13 +17,13 @@ export function AppMainNav() {
   const canSeeAdmin = role === "admin" || role === "relecteur";
 
   const baseClasses =
-    "inline-flex items-center rounded-full px-3 py-1 text-sm font-medium transition-colors";
+    "inline-flex items-center rounded-full px-3 py-1 text-sm font-medium whitespace-nowrap transition-colors";
   const inactiveClasses =
     "text-rer-muted hover:text-rer-text hover:bg-rer-app";
   const activeClasses = "bg-rer-blue text-white shadow-sm";
 
   return (
-    <nav className="flex items-center gap-2 text-sm">
+    <nav className="flex flex-wrap items-center gap-2 text-sm lg:flex-nowrap">
       <Link
         href="/articles"
         className={`${baseClasses} ${

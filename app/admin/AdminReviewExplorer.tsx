@@ -100,6 +100,7 @@ function AdminArticlePanel({
   onDetailUpdated,
   listCollapsed,
   onToggleListCollapsed,
+  showListToggle = true,
 }: {
   selectedId: string;
   selectedArticle: ArticleSummary | null;
@@ -111,6 +112,7 @@ function AdminArticlePanel({
   onDetailUpdated?: (article: ArticleDetail) => void;
   listCollapsed: boolean;
   onToggleListCollapsed: () => void;
+  showListToggle?: boolean;
 }) {
   const router = useRouter();
   const [updatingEtat, setUpdatingEtat] = useState(false);
@@ -385,14 +387,16 @@ function AdminArticlePanel({
     <div className="flex h-full flex-col">
       {/* Barre unique : Liste + État + Supprimer + Afficher modifs + Enregistré */}
       <div className="admin-action-bar mb-3 flex flex-wrap items-center gap-2 border-b border-rer-border pb-3">
-        <button
-          type="button"
-          onClick={onToggleListCollapsed}
-          className="inline-flex h-9 min-h-9 items-center gap-1 rounded-lg border border-rer-border bg-white px-3 py-2 text-[11px] font-medium text-rer-text hover:bg-rer-app"
-          aria-label={listCollapsed ? "Afficher la liste" : "Replier la liste"}
-        >
-          {listCollapsed ? "\u25B6\u00A0Liste" : "\u25C0\u00A0Liste"}
-        </button>
+        {showListToggle && (
+          <button
+            type="button"
+            onClick={onToggleListCollapsed}
+            className="inline-flex h-9 min-h-9 items-center gap-1 rounded-lg border border-rer-border bg-white px-3 py-2 text-[11px] font-medium text-rer-text hover:bg-rer-app"
+            aria-label={listCollapsed ? "Afficher la liste" : "Replier la liste"}
+          >
+            {listCollapsed ? "\u25B6\u00A0Liste" : "\u25C0\u00A0Liste"}
+          </button>
+        )}
         {detail && (
           <label className="inline-flex h-9 min-h-9 items-center gap-2 text-[11px] text-rer-muted">
             <span>État :</span>
@@ -688,6 +692,7 @@ export function AdminReviewExplorer({
   const [bulkMode, setBulkMode] = useState(false);
   const [selectedBulkIds, setSelectedBulkIds] = useState<string[]>([]);
   const [listCollapsed, setListCollapsed] = useState(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   // Met à jour la liste quand les props changent
   useEffect(() => {
@@ -846,7 +851,28 @@ export function AdminReviewExplorer({
   const handleSelect = (id: string) => {
     setSelectedId(id);
     updateUrl({ article: id });
+    if (typeof window !== "undefined" && window.innerWidth < 1024) {
+      setIsDrawerOpen(true);
+    }
   };
+
+  useEffect(() => {
+    if (!selectedId) {
+      setIsDrawerOpen(false);
+    }
+  }, [selectedId]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setIsDrawerOpen(false);
+      }
+    };
+    window.addEventListener("resize", handleResize);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
 
   const handleEtatUpdated = (etatSlugUpdated: string | null) => {
     const targetEtat = etats.find((e) => e.slug === etatSlugUpdated) ?? null;
@@ -1156,7 +1182,7 @@ export function AdminReviewExplorer({
             </p>
           )}
 
-          {selectedId && (
+          {selectedId && !isDrawerOpen && (
             <AdminArticlePanel
               selectedId={selectedId}
               selectedArticle={selectedArticle}
@@ -1168,10 +1194,51 @@ export function AdminReviewExplorer({
               onDetailUpdated={setDetail}
               listCollapsed={listCollapsed}
               onToggleListCollapsed={() => setListCollapsed((v) => !v)}
+              showListToggle
             />
           )}
         </div>
       </div>
+
+      {selectedId && isDrawerOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-slate-950/40 lg:hidden"
+          onClick={() => setIsDrawerOpen(false)}
+        >
+          <div
+            className="absolute inset-x-0 bottom-0 top-16 rounded-t-2xl bg-white shadow-xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-rer-border px-4 py-3">
+              <span className="text-sm font-medium text-rer-text">
+                Relecture article
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsDrawerOpen(false)}
+                className="rounded-lg border border-rer-border bg-white px-2 py-1 text-xs text-rer-muted hover:bg-rer-app/60"
+              >
+                Fermer
+              </button>
+            </div>
+            <div className="h-[calc(100vh-4.5rem)] overflow-y-auto px-4 py-3">
+              <AdminArticlePanel
+                selectedId={selectedId}
+                selectedArticle={selectedArticle}
+                detail={detail}
+                loading={loading}
+                error={error}
+                etats={etats}
+                onEtatUpdated={handleEtatUpdated}
+                onDetailUpdated={setDetail}
+                listCollapsed={listCollapsed}
+                onToggleListCollapsed={() => setListCollapsed((v) => !v)}
+                showListToggle={false}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
