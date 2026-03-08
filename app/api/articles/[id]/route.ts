@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser, canEditArticles } from "@/lib/auth";
 import { ingestDebug } from "@/lib/ingest-debug";
+import { sanitizeArticleHtml } from "@/lib/sanitizeArticleHtml";
 
 const historiqueUserSelect = {
   id: true,
@@ -113,8 +114,9 @@ export async function PATCH(
       (typeof contenuHtml === "string" && contenuHtml.trim()) ||
       (typeof contenu === "string" && contenu.trim()) ||
       existing.contenu;
-    finalContenuHtml = computed;
-    data.contenu = computed.trim();
+    const sanitizedContenuHtml = sanitizeArticleHtml(computed).trim() || "<p></p>";
+    finalContenuHtml = sanitizedContenuHtml;
+    data.contenu = sanitizedContenuHtml;
     if (contenuJson !== undefined) {
       data.contenuJson = contenuJson;
     }

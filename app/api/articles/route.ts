@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { canEditArticles, getSessionUser } from "@/lib/auth";
 import { ingestDebug } from "@/lib/ingest-debug";
+import { sanitizeArticleHtml } from "@/lib/sanitizeArticleHtml";
 
 function extractFirstImageSrc(html: string | null): string | null {
   if (!html) return null;
@@ -209,6 +210,7 @@ export async function POST(request: NextRequest) {
         : draftMode
         ? "<p></p>"
         : "";
+    const sanitizedContenuHtml = sanitizeArticleHtml(safeContenuHtml).trim() || "<p></p>";
 
     if (!auteurId || typeof auteurId !== "string" || !auteurId.trim()) {
       return NextResponse.json(
@@ -231,7 +233,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const htmlForDebug = safeContenuHtml || "";
+    const htmlForDebug = sanitizedContenuHtml || "";
 
     // #region agent log
     ingestDebug({
@@ -260,12 +262,13 @@ export async function POST(request: NextRequest) {
     }
 
     const autoLienPhoto = extractFirstImageSrc(safeContenuHtml);
+    const autoLienPhotoFromSanitized = extractFirstImageSrc(sanitizedContenuHtml);
 
     const article = await prisma.article.create({
       data: {
         titre: safeTitre,
         chapo: chapo?.trim() || null,
-        contenu: safeContenuHtml,
+        contenu: sanitizedContenuHtml,
         contenuJson: contenuJson ?? null,
         auteurId: safeAuteurId,
         mutuelleId: mutuelleId || null,
@@ -274,7 +277,7 @@ export async function POST(request: NextRequest) {
         etatId: targetEtat?.id ?? null,
         legendePhoto: legendePhoto?.trim() || null,
         postRs: postRs?.trim() || null,
-        lienPhoto: (lienPhoto?.trim() || autoLienPhoto) ?? null,
+        lienPhoto: (lienPhoto?.trim() || autoLienPhotoFromSanitized || autoLienPhoto) ?? null,
         lienGoogleDoc: lienGoogleDoc?.trim() || null,
         dateDepot: draftMode ? null : new Date(),
       },
