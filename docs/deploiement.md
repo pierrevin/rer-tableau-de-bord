@@ -11,10 +11,12 @@ Ce document décrit comment déployer l’application en production. Les correct
   - `DATABASE_URL` : URL de connexion PostgreSQL (Supabase ou autre).
   - `NEXTAUTH_SECRET` : secret pour les sessions (générer une valeur longue et aléatoire).
   - `NEXTAUTH_URL` : URL publique de l’app (ex. `https://votre-app.vercel.app`).
-  - `MAIL_PROVIDER` : provider d’envoi (`auto`, `webhook`, `resend`, `noop`, `smtp` réservé).
+  - `MAIL_PROVIDER` : provider d’envoi (`auto`, `webhook`, `resend`, `smtp`, `noop`).
   - `MAIL_WEBHOOK_URL` : endpoint HTTP d’envoi d’e-mails (si provider `webhook`).
   - `MAIL_FROM` : expéditeur (obligatoire pour Resend).
   - `RESEND_API_KEY` : clé API Resend (si provider `resend`).
+  - `SMTP_URL` : URL de connexion SMTP complète (optionnelle si `SMTP_HOST`/`SMTP_PORT` fournis).
+  - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_SECURE` : configuration SMTP détaillée (si provider `smtp`).
   - `PASSWORD_RESET_WEBHOOK_URL` : variable legacy encore supportée (fallback si `MAIL_WEBHOOK_URL` absent).
 
 Génération d’un `NEXTAUTH_SECRET` :

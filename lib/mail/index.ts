@@ -1,5 +1,6 @@
 import { createNoopProvider } from "./providers/noop";
 import { createResendProvider } from "./providers/resend";
+import { createSmtpProvider } from "./providers/smtp";
 import { createWebhookProvider } from "./providers/webhook";
 import type { MailPayload, MailProvider, MailProviderName } from "./types";
 
@@ -13,8 +14,50 @@ const MAIL_WEBHOOK_URL =
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY?.trim() || "";
 const MAIL_FROM = process.env.MAIL_FROM?.trim() || "";
+const SMTP_URL = process.env.SMTP_URL?.trim() || "";
+const SMTP_HOST = process.env.SMTP_HOST?.trim() || "";
+const SMTP_PORT_RAW = process.env.SMTP_PORT?.trim() || "";
+const SMTP_USER = process.env.SMTP_USER?.trim() || "";
+const SMTP_PASS = process.env.SMTP_PASS?.trim() || "";
+const SMTP_SECURE_RAW = process.env.SMTP_SECURE?.trim().toLowerCase() || "";
 
 let cachedProvider: MailProvider | null = null;
+
+function parseSmtpPort(value: string): number | undefined {
+  if (!value) return undefined;
+  const port = Number(value);
+  if (!Number.isFinite(port) || port <= 0) return undefined;
+  return port;
+}
+
+function parseSmtpSecure(value: string): boolean | undefined {
+  if (!value) return undefined;
+  if (value === "1" || value === "true" || value === "yes") return true;
+  if (value === "0" || value === "false" || value === "no") return false;
+  return undefined;
+}
+
+function hasSmtpConfig(): boolean {
+  return Boolean(SMTP_URL || SMTP_HOST);
+}
+
+function getSmtpProvider(): MailProvider {
+  if (!MAIL_FROM) {
+    throw new Error("MAIL_FROM manquant pour MAIL_PROVIDER=smtp");
+  }
+  if (!hasSmtpConfig()) {
+    throw new Error("SMTP_URL ou SMTP_HOST manquant pour MAIL_PROVIDER=smtp");
+  }
+  return createSmtpProvider({
+    from: MAIL_FROM,
+    url: SMTP_URL || undefined,
+    host: SMTP_HOST || undefined,
+    port: parseSmtpPort(SMTP_PORT_RAW),
+    secure: parseSmtpSecure(SMTP_SECURE_RAW),
+    user: SMTP_USER || undefined,
+    pass: SMTP_PASS || undefined,
+  });
+}
 
 function resolveProvider(): MailProvider {
   if (cachedProvider) return cachedProvider;
@@ -41,9 +84,8 @@ function resolveProvider(): MailProvider {
   }
 
   if (MAIL_PROVIDER === "smtp") {
-    throw new Error(
-      "MAIL_PROVIDER=smtp est réservé: branchez votre implémentation SMTP."
-    );
+    cachedProvider = getSmtpProvider();
+    return cachedProvider;
   }
 
   // auto / noop
@@ -57,6 +99,11 @@ function resolveProvider(): MailProvider {
       apiKey: RESEND_API_KEY,
       from: MAIL_FROM,
     });
+    return cachedProvider;
+  }
+
+  if (hasSmtpConfig() && MAIL_FROM) {
+    cachedProvider = getSmtpProvider();
     return cachedProvider;
   }
 
