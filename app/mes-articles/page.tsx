@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
@@ -226,7 +227,7 @@ export default async function MesArticlesPage({ searchParams }: PageProps) {
             <h1 className="text-2xl font-semibold text-rer-text">Mes articles</h1>
             <p className="text-sm text-rer-muted">{statusSummary}</p>
           </div>
-          <a
+          <Link
             href="/articles/depot"
             className="btn-cta"
           >
@@ -234,7 +235,7 @@ export default async function MesArticlesPage({ searchParams }: PageProps) {
               +
             </span>
             <span>Nouvel article</span>
-          </a>
+          </Link>
         </header>
 
         <MesArticlesFiltersBar

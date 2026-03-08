@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export const dynamic = "force-dynamic";
 
 export default function RelecteursPage() {
@@ -14,12 +16,12 @@ export default function RelecteursPage() {
         </p>
       </header>
       <div className="flex flex-wrap items-center gap-2 text-sm">
-        <a
+        <Link
           href="/articles?view=explorer&mode=relecteur"
           className="inline-flex items-center gap-2 rounded-full bg-rer-blue px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#1e3380]"
         >
           Ouvrir la vue Explorer des articles
-        </a>
+        </Link>
         <p className="text-xs text-rer-subtle">
           (Les autres sections du menu sont en cours de conception.)
         </p>

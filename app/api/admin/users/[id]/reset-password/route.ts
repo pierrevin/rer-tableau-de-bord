@@ -5,7 +5,7 @@ import { getSessionUser } from "@/lib/auth";
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const sessionUser = await getSessionUser(request);
   if (!sessionUser || sessionUser.role !== "admin") {
@@ -15,7 +15,7 @@ export async function POST(
     );
   }
 
-  const { id } = params;
+  const { id } = await params;
   let body: { password?: string };
   try {
     body = (await request.json()) as { password?: string };
