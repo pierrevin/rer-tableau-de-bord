@@ -18,11 +18,10 @@ export function AppUserSwitchFooter() {
   const pathname = usePathname();
   const [users, setUsers] = useState<UserSummary[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
-
-  // Masquer sur la page de login ou si le switch n'est pas activé
-  if (pathname === "/login" || !enableUserSwitch) return null;
+  const shouldHide = pathname === "/login" || !enableUserSwitch;
 
   useEffect(() => {
+    if (shouldHide) return;
     if (!session?.user) return;
     if (session.user.role !== "admin") return;
     if (users.length > 0 || loadingUsers) return;
@@ -47,7 +46,7 @@ export function AppUserSwitchFooter() {
       .finally(() => {
         setLoadingUsers(false);
       });
-  }, [loadingUsers, session?.user, users.length]);
+  }, [loadingUsers, session?.user, shouldHide, users.length]);
 
   const handleSwitchUser = async (userId: string) => {
     if (!userId) return;
@@ -79,6 +78,7 @@ export function AppUserSwitchFooter() {
   };
 
   if (status !== "authenticated" || !session?.user) return null;
+  if (shouldHide) return null;
 
   const isImpersonating = !!(session as { originalUserId?: string | null }).originalUserId;
   const isAdmin = session.user.role === "admin";

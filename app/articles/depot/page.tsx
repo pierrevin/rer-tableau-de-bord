@@ -51,6 +51,8 @@ export default function DepotPage() {
   const [formatMenuOpen, setFormatMenuOpen] = useState(false);
   const [rubriqueMenuOpen, setRubriqueMenuOpen] = useState(false);
   const [signatureMenuOpen, setSignatureMenuOpen] = useState(false);
+  const [uploadingMainImage, setUploadingMainImage] = useState(false);
+  const [uploadMainImageError, setUploadMainImageError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/referentiels")
@@ -326,9 +328,6 @@ export default function DepotPage() {
       </div>
     );
   }
-
-  const [uploadingMainImage, setUploadingMainImage] = useState(false);
-  const [uploadMainImageError, setUploadMainImageError] = useState<string | null>(null);
 
   const performMainImageUpload = async (file: File) => {
     setUploadingMainImage(true);
