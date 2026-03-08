@@ -25,10 +25,11 @@ type SearchParams = {
 };
 
 type PageProps = {
-  searchParams?: SearchParams;
+  searchParams?: Promise<SearchParams>;
 };
 
 export default async function ArticlesPage({ searchParams }: PageProps) {
+  const params = (await searchParams) ?? {};
   const lastArticle = await prisma.article.findFirst({
     orderBy: [
       { dateDepot: "desc" },
@@ -40,19 +41,19 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
   const sessionUser = await getSessionUser();
   const showEtat = canEditArticles(sessionUser?.role);
 
-  const q = searchParams?.q?.trim() || "";
-  const page = Math.max(Number(searchParams?.page) || 1, 1);
-  const etatSlug = searchParams?.etat || "";
-  const mutuelleParam = searchParams?.mutuelleId || "";
-  const rubriqueParam = searchParams?.rubriqueId || "";
-  const formatParam = searchParams?.formatId || "";
-  const sinceParam = searchParams?.since || "";
-  const fromParam = searchParams?.from || "";
-  const toParam = searchParams?.to || "";
-  const selectedArticleId = searchParams?.article || "";
-  const mineParam = searchParams?.mine === "1" ? "1" : "";
-  const backParam = searchParams?.back || "";
-  const rawView = searchParams?.view;
+  const q = params.q?.trim() || "";
+  const page = Math.max(Number(params.page) || 1, 1);
+  const etatSlug = params.etat || "";
+  const mutuelleParam = params.mutuelleId || "";
+  const rubriqueParam = params.rubriqueId || "";
+  const formatParam = params.formatId || "";
+  const sinceParam = params.since || "";
+  const fromParam = params.from || "";
+  const toParam = params.to || "";
+  const selectedArticleId = params.article || "";
+  const mineParam = params.mine === "1" ? "1" : "";
+  const backParam = params.back || "";
+  const rawView = params.view;
   const view: "cards" | "explorer" | "table" =
     rawView === "table" || rawView === "cards" || rawView === "explorer"
       ? rawView

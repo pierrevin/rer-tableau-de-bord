@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser, canEditArticles } from "@/lib/auth";
 import { ingestDebug } from "@/lib/ingest-debug";
+import { sanitizeArticleHtml } from "@/lib/sanitizeArticleHtml";
+
+const historiqueUserSelect = {
+  id: true,
+  email: true,
+  role: true,
+};
 
 function extractFirstImageSrc(html: string | null): string | null {
   if (!html) return null;
@@ -15,9 +22,14 @@ function extractFirstImageSrc(html: string | null): string | null {
 }
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const user = await getSessionUser(request);
+  if (!user) {
+    return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+  }
+
   const { id } = await params;
   const article = await prisma.article.findUnique({
     where: { id },
@@ -29,7 +41,7 @@ export async function GET(
       etat: true,
       historiques: {
         orderBy: { createdAt: "desc" },
-        include: { etat: true, user: true },
+        include: { etat: true, user: { select: historiqueUserSelect } },
       },
     },
   });
@@ -41,16 +53,25 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  let user = null;
-  try {
-    user = await getSessionUser(request);
-  } catch {
-    user = null;
+  const user = await getSessionUser(request);
+  if (!user) {
+    return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
   }
 
   const { id } = await params;
-  const existing = await prisma.article.findUnique({ where: { id } });
+  const existing = await prisma.article.findUnique({
+    where: { id },
+    select: { id: true, auteurId: true, etatId: true, datePublication: true, dateDepot: true, contenu: true, lienPhoto: true },
+  });
   if (!existing) return NextResponse.json({ error: "Article introuvable" }, { status: 404 });
+  const isEditor = canEditArticles(user.role);
+  const isAuthor = !!user.auteurId && user.auteurId === existing.auteurId;
+  if (!isEditor && !isAuthor) {
+    return NextResponse.json(
+      { error: "Vous n’êtes pas autorisé à modifier cet article." },
+      { status: 403 }
+    );
+  }
 
   const body = await request.json();
 
@@ -93,16 +114,29 @@ export async function PATCH(
       (typeof contenuHtml === "string" && contenuHtml.trim()) ||
       (typeof contenu === "string" && contenu.trim()) ||
       existing.contenu;
-    finalContenuHtml = computed;
-    data.contenu = computed.trim();
+    const sanitizedContenuHtml = sanitizeArticleHtml(computed).trim() || "<p></p>";
+    finalContenuHtml = sanitizedContenuHtml;
+    data.contenu = sanitizedContenuHtml;
     if (contenuJson !== undefined) {
       data.contenuJson = contenuJson;
     }
   }
   if (etatId !== undefined) {
+    if (!isEditor) {
+      return NextResponse.json(
+        { error: "Modification d’état réservée aux relecteurs et administrateurs." },
+        { status: 403 }
+      );
+    }
     data.etatId = etatId || null;
   } else if (typeof etatSlug === "string" && etatSlug.trim()) {
     const targetSlug = etatSlug.trim();
+    if (!isEditor && targetSlug !== "brouillon" && targetSlug !== "a_relire") {
+      return NextResponse.json(
+        { error: "Transition d’état non autorisée." },
+        { status: 403 }
+      );
+    }
     let targetEtat = await prisma.etat.findFirst({ where: { slug: targetSlug } });
     if (!targetEtat && targetSlug === "brouillon") {
       targetEtat = await prisma.etat.create({
@@ -112,6 +146,12 @@ export async function PATCH(
     data.etatId = targetEtat?.id ?? null;
   }
   if (auteurId !== undefined && typeof auteurId === "string" && auteurId.trim()) {
+    if (!isEditor && auteurId.trim() !== existing.auteurId) {
+      return NextResponse.json(
+        { error: "Changement d’auteur réservé aux relecteurs et administrateurs." },
+        { status: 403 }
+      );
+    }
     data.auteurId = auteurId.trim();
   }
   if (mutuelleId !== undefined) data.mutuelleId = mutuelleId || null;
@@ -167,7 +207,7 @@ export async function PATCH(
       etat: true,
       historiques: {
         orderBy: { createdAt: "desc" },
-        include: { etat: true, user: true },
+        include: { etat: true, user: { select: historiqueUserSelect } },
       },
     },
   });

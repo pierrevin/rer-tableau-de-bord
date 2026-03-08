@@ -4,6 +4,7 @@ import type { NextRequest } from "next/server";
 import { authOptions } from "./auth-options";
 
 export type Role = "admin" | "relecteur" | "auteur" | "lecteur";
+export const VALID_ROLES: Role[] = ["admin", "relecteur", "auteur", "lecteur"];
 
 export interface SessionUser {
   id: string;
@@ -17,6 +18,10 @@ export interface SessionUser {
  */
 export function canEditArticles(role: string | undefined): boolean {
   return role === "admin" || role === "relecteur";
+}
+
+export function isValidRole(role: string): role is Role {
+  return VALID_ROLES.includes(role as Role);
 }
 
 /**

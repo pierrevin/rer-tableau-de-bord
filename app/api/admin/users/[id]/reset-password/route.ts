@@ -1,18 +1,32 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcrypt";
 import { prisma } from "@/lib/prisma";
+import { getSessionUser } from "@/lib/auth";
 
 export async function POST(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = params;
-  const body = await request.json();
+  const sessionUser = await getSessionUser(request);
+  if (!sessionUser || sessionUser.role !== "admin") {
+    return NextResponse.json(
+      { error: "Accès réservé aux administrateurs" },
+      { status: 403 }
+    );
+  }
+
+  const { id } = await params;
+  let body: { password?: string };
+  try {
+    body = (await request.json()) as { password?: string };
+  } catch {
+    return NextResponse.json({ error: "Corps JSON invalide" }, { status: 400 });
+  }
   const { password } = body as { password?: string };
 
-  if (!password || typeof password !== "string" || password.length < 6) {
+  if (!password || typeof password !== "string" || password.length < 12) {
     return NextResponse.json(
-      { error: "Mot de passe invalide (minimum 6 caractères)" },
+      { error: "Mot de passe invalide (minimum 12 caractères)" },
       { status: 400 }
     );
   }

@@ -1,6 +1,7 @@
  "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { ArticleReadSidePanel } from "@/app/articles/ArticleReadSidePanel";
 
 type ArticleSummary = {
@@ -171,11 +172,13 @@ export function ArticlesCardsView({
           >
             <div className="relative h-40 w-full bg-rer-app sm:h-auto sm:w-40 sm:flex-none">
               {article.lienPhoto ? (
-                <img
+                <Image
                   src={article.lienPhoto}
                   alt={article.legendePhoto || article.titre}
-                  className="h-full w-full object-cover"
-                  loading="lazy"
+                  fill
+                  sizes="(max-width: 640px) 100vw, 160px"
+                  unoptimized
+                  className="object-cover"
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center text-xs text-rer-muted">

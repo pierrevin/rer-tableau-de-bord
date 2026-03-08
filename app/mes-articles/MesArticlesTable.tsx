@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import Image from "next/image";
 import { useState } from "react";
 import {
   getEtatBadgeClasses,
@@ -284,12 +285,14 @@ export function MesArticlesTable({
                   </td>
                   <td className="px-3 py-2 align-top">
                     {article.lienPhoto ? (
-                      <div className="h-14 w-14 overflow-hidden rounded-lg border border-rer-border bg-rer-app">
-                        <img
+                      <div className="relative h-14 w-14 overflow-hidden rounded-lg border border-rer-border bg-rer-app">
+                        <Image
                           src={article.lienPhoto}
                           alt=""
-                          className="h-full w-full object-cover"
-                          loading="lazy"
+                          fill
+                          sizes="56px"
+                          unoptimized
+                          className="object-cover"
                         />
                       </div>
                     ) : (

@@ -417,7 +417,6 @@ export function ArticlesFiltersBar({
               placeholder="Titre, chapô, contenu, ou nom de mutuelle / rubrique / format..."
               className="mt-1 w-full rounded-lg border border-rer-border bg-white px-3 py-1.5 text-sm text-rer-text shadow-sm focus:border-rer-blue focus:outline-none focus:ring-1 focus:ring-rer-blue"
               autoComplete="off"
-              aria-expanded={hasSuggestions}
               aria-controls="search-suggestions"
               aria-autocomplete="list"
             />
@@ -438,6 +437,7 @@ export function ArticlesFiltersBar({
                       key={m.id}
                       type="button"
                       role="option"
+                      aria-selected={false}
                       onClick={() => applyFacetSuggestion("mutuelle", m.id, `Mutuelle : ${m.nom}`)}
                     className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-rer-text hover:bg-rer-app"
                     >
@@ -452,6 +452,7 @@ export function ArticlesFiltersBar({
                       key={r.id}
                       type="button"
                       role="option"
+                      aria-selected={false}
                       onClick={() => applyFacetSuggestion("rubrique", r.id, `Rubrique : ${r.libelle}`)}
                     className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-rer-text hover:bg-rer-app"
                     >
@@ -466,6 +467,7 @@ export function ArticlesFiltersBar({
                       key={f.id}
                       type="button"
                       role="option"
+                      aria-selected={false}
                       onClick={() => applyFacetSuggestion("format", f.id, `Format : ${f.libelle}`)}
                     className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-rer-text hover:bg-rer-app"
                     >
@@ -482,6 +484,7 @@ export function ArticlesFiltersBar({
                       <button
                         type="button"
                         role="option"
+                        aria-selected={false}
                         onClick={applyTextSearch}
                         className="flex w-full items-center gap-2 rounded px-2 py-2 text-left text-sm font-medium text-rer-text hover:bg-rer-app"
                       >
@@ -495,6 +498,7 @@ export function ArticlesFiltersBar({
                       <button
                         type="button"
                         role="option"
+                        aria-selected={false}
                         onClick={applyTextSearch}
                         className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-medium text-rer-text hover:bg-rer-app"
                       >

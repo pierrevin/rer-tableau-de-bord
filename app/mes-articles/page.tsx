@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
@@ -14,7 +15,7 @@ type SearchParams = {
 };
 
 type PageProps = {
-  searchParams?: SearchParams;
+  searchParams?: Promise<SearchParams>;
 };
 
 function buildLastActionLabel(options: {
@@ -76,6 +77,7 @@ function buildLastActionLabel(options: {
 }
 
 export default async function MesArticlesPage({ searchParams }: PageProps) {
+  const params = (await searchParams) ?? {};
   const sessionUser = await getSessionUser();
 
   if (!sessionUser) {
@@ -84,11 +86,11 @@ export default async function MesArticlesPage({ searchParams }: PageProps) {
 
   const auteurId = sessionUser.auteurId;
 
-  const rawPage = searchParams?.page;
+  const rawPage = params.page;
   const page = Math.max(Number(rawPage) || 1, 1);
-  const etatSlug = searchParams?.etat ?? "";
-  const mutuelleIdParam = searchParams?.mutuelleId ?? "";
-  const sort = searchParams?.sort ?? "lastModifiedDesc";
+  const etatSlug = params.etat ?? "";
+  const mutuelleIdParam = params.mutuelleId ?? "";
+  const sort = params.sort ?? "lastModifiedDesc";
 
   const take = 20;
   const skip = (page - 1) * take;
@@ -226,7 +228,7 @@ export default async function MesArticlesPage({ searchParams }: PageProps) {
             <h1 className="text-2xl font-semibold text-rer-text">Mes articles</h1>
             <p className="text-sm text-rer-muted">{statusSummary}</p>
           </div>
-          <a
+          <Link
             href="/articles/depot"
             className="btn-cta"
           >
@@ -234,7 +236,7 @@ export default async function MesArticlesPage({ searchParams }: PageProps) {
               +
             </span>
             <span>Nouvel article</span>
-          </a>
+          </Link>
         </header>
 
         <MesArticlesFiltersBar

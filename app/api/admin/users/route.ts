@@ -1,11 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSessionUser } from "@/lib/auth";
+import { canEditArticles, getSessionUser, isValidRole } from "@/lib/auth";
 
-export async function GET() {
+const userSafeSelect = {
+  id: true,
+  email: true,
+  role: true,
+  auteurId: true,
+  createdAt: true,
+  updatedAt: true,
+};
+
+export async function GET(request: NextRequest) {
+  const sessionUser = await getSessionUser(request);
+  if (!sessionUser) {
+    return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+  }
+  if (!canEditArticles(sessionUser.role)) {
+    return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+  }
+
   const users = await prisma.user.findMany({
     orderBy: { email: "asc" },
     take: 500,
+    select: userSafeSelect,
   });
   const auteurs = await prisma.auteur.findMany({
     orderBy: [{ nom: "asc" }, { prenom: "asc" }],
@@ -34,6 +52,9 @@ export async function POST(request: NextRequest) {
 
   if (!email || typeof email !== "string") {
     return NextResponse.json({ error: "Email obligatoire" }, { status: 400 });
+  }
+  if (role !== undefined && (!role || typeof role !== "string" || !isValidRole(role))) {
+    return NextResponse.json({ error: "Rôle invalide" }, { status: 400 });
   }
 
   if (!mutuelleId) {
@@ -77,6 +98,7 @@ export async function POST(request: NextRequest) {
       role: role && typeof role === "string" ? role : "auteur",
       auteurId: finalAuteurId,
     },
+    select: userSafeSelect,
   });
 
   return NextResponse.json(user, { status: 201 });

@@ -1,8 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSessionUser } from "@/lib/auth";
+import { canEditArticles, getSessionUser } from "@/lib/auth";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const sessionUser = await getSessionUser(request);
+  if (!sessionUser) {
+    return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+  }
+  if (!canEditArticles(sessionUser.role)) {
+    return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+  }
+
   const auteurs = await prisma.auteur.findMany({
     orderBy: [{ nom: "asc" }, { prenom: "asc" }],
     include: { mutuelle: true },

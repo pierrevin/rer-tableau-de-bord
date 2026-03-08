@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSessionUser } from "@/lib/auth";
+import { getSessionUser, isValidRole } from "@/lib/auth";
+
+const userSafeSelect = {
+  id: true,
+  email: true,
+  role: true,
+  auteurId: true,
+  createdAt: true,
+  updatedAt: true,
+};
 
 export async function PATCH(
   request: NextRequest,
@@ -19,6 +28,9 @@ export async function PATCH(
     data.email = body.email.trim().toLowerCase();
   }
   if (typeof body.role === "string") {
+    if (!isValidRole(body.role)) {
+      return NextResponse.json({ error: "Rôle invalide" }, { status: 400 });
+    }
     data.role = body.role;
   }
   if (body.auteurId !== undefined) {
@@ -28,6 +40,7 @@ export async function PATCH(
   const user = await prisma.user.update({
     where: { id },
     data,
+    select: userSafeSelect,
   });
 
   return NextResponse.json(user);

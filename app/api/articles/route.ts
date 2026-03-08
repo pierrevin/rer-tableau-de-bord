@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSessionUser } from "@/lib/auth";
+import { canEditArticles, getSessionUser } from "@/lib/auth";
 import { ingestDebug } from "@/lib/ingest-debug";
+import { sanitizeArticleHtml } from "@/lib/sanitizeArticleHtml";
 
 function extractFirstImageSrc(html: string | null): string | null {
   if (!html) return null;
@@ -158,6 +159,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const sessionUser = await getSessionUser(request);
+    if (!sessionUser) {
+      return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+    }
+
     const body = await request.json();
     const {
       titre,
@@ -204,11 +210,20 @@ export async function POST(request: NextRequest) {
         : draftMode
         ? "<p></p>"
         : "";
+    const sanitizedContenuHtml = sanitizeArticleHtml(safeContenuHtml).trim() || "<p></p>";
 
     if (!auteurId || typeof auteurId !== "string" || !auteurId.trim()) {
       return NextResponse.json(
         { error: "Champs requis : auteurId" },
         { status: 400 }
+      );
+    }
+    const safeAuteurId = auteurId.trim();
+    const isEditor = canEditArticles(sessionUser.role);
+    if (!isEditor && sessionUser.auteurId !== safeAuteurId) {
+      return NextResponse.json(
+        { error: "Vous ne pouvez créer des articles que pour votre propre profil auteur." },
+        { status: 403 }
       );
     }
     if (!draftMode && (!safeTitre || !safeContenuHtml)) {
@@ -218,7 +233,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const htmlForDebug = safeContenuHtml || "";
+    const htmlForDebug = sanitizedContenuHtml || "";
 
     // #region agent log
     ingestDebug({
@@ -247,21 +262,22 @@ export async function POST(request: NextRequest) {
     }
 
     const autoLienPhoto = extractFirstImageSrc(safeContenuHtml);
+    const autoLienPhotoFromSanitized = extractFirstImageSrc(sanitizedContenuHtml);
 
     const article = await prisma.article.create({
       data: {
         titre: safeTitre,
         chapo: chapo?.trim() || null,
-        contenu: safeContenuHtml,
+        contenu: sanitizedContenuHtml,
         contenuJson: contenuJson ?? null,
-        auteurId: auteurId.trim(),
+        auteurId: safeAuteurId,
         mutuelleId: mutuelleId || null,
         rubriqueId: rubriqueId || null,
         formatId: formatId || null,
         etatId: targetEtat?.id ?? null,
         legendePhoto: legendePhoto?.trim() || null,
         postRs: postRs?.trim() || null,
-        lienPhoto: (lienPhoto?.trim() || autoLienPhoto) ?? null,
+        lienPhoto: (lienPhoto?.trim() || autoLienPhotoFromSanitized || autoLienPhoto) ?? null,
         lienGoogleDoc: lienGoogleDoc?.trim() || null,
         dateDepot: draftMode ? null : new Date(),
       },

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useParams, useSearchParams } from "next/navigation";
 import {
   getEtatBadgeClasses,
@@ -261,9 +262,12 @@ export default function ArticleDetailPage() {
           {article.lienPhoto && (
             <div className="space-y-2">
               <div className="overflow-hidden rounded-lg border border-rer-border bg-rer-app">
-                <img
+                <Image
                   src={article.lienPhoto}
                   alt={article.legendePhoto || article.titre}
+                  width={1400}
+                  height={900}
+                  unoptimized
                   className="h-auto w-full max-h-96 object-cover"
                 />
               </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import {
   getEtatBadgeClasses,
@@ -219,9 +220,12 @@ export function ArticleReadSidePanel({
               {article.lienPhoto && (
                 <div className="space-y-2">
                   <div className="overflow-hidden rounded-lg border border-rer-border bg-rer-app">
-                    <img
+                    <Image
                       src={article.lienPhoto}
                       alt={article.legendePhoto || article.titre}
+                      width={1200}
+                      height={700}
+                      unoptimized
                       className="h-auto w-full max-h-80 object-cover"
                     />
                   </div>

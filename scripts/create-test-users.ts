@@ -21,14 +21,12 @@ async function main() {
         role: u.role,
       },
     });
-    // eslint-disable-next-line no-console
     console.log(`User ready: ${user.email} (${user.role})`);
   }
 }
 
 main()
   .catch((e) => {
-    // eslint-disable-next-line no-console
     console.error(e);
     process.exit(1);
   })
