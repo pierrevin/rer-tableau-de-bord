@@ -56,13 +56,13 @@ export async function GET(
 
   const { id } = await params;
   const scope = request.nextUrl.searchParams.get("scope");
-  const article = await prisma.article.findUnique(
+  const article =
     scope === "preview"
-      ? {
+      ? await prisma.article.findUnique({
           where: { id },
           select: articlePreviewSelect,
-        }
-      : {
+        })
+      : await prisma.article.findUnique({
           where: { id },
           include: {
             auteur: true,
@@ -75,8 +75,7 @@ export async function GET(
               include: { etat: true, user: { select: historiqueUserSelect } },
             },
           },
-        }
-  );
+        });
   if (!article) return NextResponse.json({ error: "Article introuvable" }, { status: 404 });
   return NextResponse.json(article);
 }
