@@ -34,9 +34,14 @@ Test credentials: `admin@rer.local` / `relecteur@rer.local` / `auteur@rer.local`
 ### Standard commands
 
 - **Lint**: `npm run lint`
+- **TypeScript check**: `npx tsc --noEmit` (passes cleanly — use this to validate types without building)
 - **Build**: `npm run build` (note: build fails due to pre-existing `react-hooks/rules-of-hooks` errors in `app/articles/depot/page.tsx` and `app/AppUserSwitchFooter.tsx`)
 - **Dev server**: `npm run dev`
 - **Prisma generate**: `npm run db:generate`
+
+### Dependency management
+
+The update script uses `npm ci` (not `npm install`) for deterministic, fast installs from `package-lock.json`. This avoids unnecessary lockfile diffs and is ~2x faster. After `npm ci`, `npx prisma generate` is required to regenerate the Prisma Client (which lives inside `node_modules`).
 
 ### Gotchas
 
