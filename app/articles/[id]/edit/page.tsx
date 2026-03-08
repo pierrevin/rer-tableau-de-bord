@@ -1,10 +1,10 @@
 import { redirect } from "next/navigation";
 
 type PageProps = {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 };
 
-export default function ArticleEditRedirectPage({ params }: PageProps) {
-  const { id } = params;
+export default async function ArticleEditRedirectPage({ params }: PageProps) {
+  const { id } = await params;
   redirect(`/articles?view=explorer&article=${encodeURIComponent(id)}`);
 }
