@@ -11,6 +11,7 @@ Ce document décrit comment déployer l’application en production. Les correct
   - `DATABASE_URL` : URL de connexion PostgreSQL (Supabase ou autre).
   - `NEXTAUTH_SECRET` : secret pour les sessions (générer une valeur longue et aléatoire).
   - `NEXTAUTH_URL` : URL publique de l’app (ex. `https://votre-app.vercel.app`).
+  - `PASSWORD_RESET_WEBHOOK_URL` : endpoint HTTP qui envoie les e‑mails de réinitialisation (payload JSON avec `to`, `subject`, `text`, `html`).
 
 Génération d’un `NEXTAUTH_SECRET` :
 ```bash

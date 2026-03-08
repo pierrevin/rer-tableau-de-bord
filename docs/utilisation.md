@@ -14,6 +14,13 @@ Guide utilisateur pour la base de données d’articles (dépôt, relecture, con
 
 Seuls les utilisateurs connectés peuvent accéder au tableau de bord et aux actions selon leur rôle : toute tentative d’accès direct à une page de l’application redirige automatiquement vers `/login` tant que l’utilisateur n’est pas authentifié.
 
+### 1.1 Mot de passe oublié
+
+- Depuis `/login`, cliquer sur **« Mot de passe oublié ? »**.
+- Saisir l’email du compte puis envoyer la demande.
+- Un lien de réinitialisation est généré (valide 60 minutes) et envoyé via le mécanisme d’e-mail configuré.
+- Ouvrir le lien reçu pour accéder à `/reset-password`, puis définir un nouveau mot de passe (minimum 12 caractères).
+
 ---
 
 ## 2. Navigation et pages principales

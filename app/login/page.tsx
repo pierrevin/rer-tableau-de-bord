@@ -12,6 +12,10 @@ function LoginPageInner() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showForgotForm, setShowForgotForm] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotMessage, setForgotMessage] = useState<string | null>(null);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -41,6 +45,32 @@ function LoginPageInner() {
   };
 
   const presetError = searchParams.get("error");
+
+  const handleForgotPassword = async () => {
+    setForgotMessage(null);
+    setForgotLoading(true);
+    try {
+      const res = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: forgotEmail }),
+      });
+      const data = await res.json().catch(() => ({}));
+      setForgotMessage(
+        data.message ||
+          "Si un compte existe pour cet email, un lien de réinitialisation a été envoyé."
+      );
+      if (res.ok) {
+        setForgotEmail("");
+      }
+    } catch {
+      setForgotMessage(
+        "Si un compte existe pour cet email, un lien de réinitialisation a été envoyé."
+      );
+    } finally {
+      setForgotLoading(false);
+    }
+  };
 
   return (
     <div className="flex min-h-[calc(100vh-80px)] items-center justify-center px-4 py-8">
@@ -108,6 +138,50 @@ function LoginPageInner() {
             Comptes de test (en local) : admin@rer.local / relecteur@rer.local
             / auteur@rer.local avec le mot de passe <code>rer2025</code>.
           </p>
+
+          <div className="pt-2">
+            <button
+              type="button"
+              onClick={() => {
+                setShowForgotForm((v) => !v);
+                setForgotMessage(null);
+              }}
+              className="text-xs font-medium text-rer-blue hover:underline"
+            >
+              {showForgotForm
+                ? "Masquer le formulaire de récupération"
+                : "Mot de passe oublié ?"}
+            </button>
+          </div>
+
+          {showForgotForm && (
+            <div className="rounded-lg border border-rer-border bg-rer-app/40 p-3">
+              <p className="mb-2 text-xs text-rer-muted">
+                Saisissez votre email pour recevoir un lien de réinitialisation.
+              </p>
+              <div className="space-y-2">
+                <input
+                  type="email"
+                  value={forgotEmail}
+                  onChange={(e) => setForgotEmail(e.target.value)}
+                  className="w-full rounded-lg border border-rer-border bg-white px-3 py-2 text-sm text-rer-text shadow-sm focus:border-rer-blue focus:outline-none focus:ring-1 focus:ring-rer-blue"
+                  placeholder="vous@exemple.fr"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  disabled={forgotLoading}
+                  className="inline-flex w-full items-center justify-center rounded-full border border-rer-blue bg-white px-4 py-2 text-sm font-semibold text-rer-blue hover:bg-rer-app disabled:opacity-60"
+                >
+                  {forgotLoading ? "Envoi…" : "Envoyer le lien"}
+                </button>
+              </div>
+              {forgotMessage && (
+                <p className="mt-2 text-xs text-rer-muted">{forgotMessage}</p>
+              )}
+            </div>
+          )}
         </form>
       </div>
     </div>

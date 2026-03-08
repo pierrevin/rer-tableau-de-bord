@@ -11,6 +11,7 @@ export async function proxy(req: NextRequest) {
   // - les assets Next.js et fichiers statiques usuels
   if (
     pathname === "/login" ||
+    pathname === "/reset-password" ||
     pathname.startsWith("/api/auth") ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon") ||
