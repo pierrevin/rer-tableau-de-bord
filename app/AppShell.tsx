@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import { AppMainNav } from "./AppMainNav";
 import { AppUserStatus } from "./AppUserStatus";
 import { AppHeaderSecondary } from "./AppHeaderSecondary";
@@ -14,6 +15,7 @@ type AppShellProps = {
 
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
+  const [logoUnavailable, setLogoUnavailable] = useState(false);
   const isLogin = pathname === "/login";
 
   if (isLogin) {
@@ -27,14 +29,21 @@ export function AppShell({ children }: AppShellProps) {
           <div className="flex items-center justify-between gap-4">
             <Link href="/" className="flex items-center gap-3">
               <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full border border-rer-border bg-white">
-                <Image
-                  src="/uploads/Logo_rer_noir-hd.jpg"
-                  alt="Logo RER"
-                  fill
-                  sizes="48px"
-                  className="object-contain p-2"
-                  priority
-                />
+                {!logoUnavailable ? (
+                  <Image
+                    src="/uploads/Logo_rer_noir-hd.jpg"
+                    alt="Logo RER"
+                    fill
+                    sizes="48px"
+                    className="object-contain p-2"
+                    priority
+                    onError={() => setLogoUnavailable(true)}
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-xs font-bold tracking-wide text-rer-muted">
+                    RER
+                  </div>
+                )}
               </div>
               <div className="flex flex-col">
                 <span className="text-base font-semibold text-rer-text">
