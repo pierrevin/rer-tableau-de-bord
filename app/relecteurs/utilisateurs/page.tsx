@@ -227,32 +227,32 @@ export default function AdminUsersPage() {
         <h2 className="text-xs font-semibold uppercase tracking-wide text-rer-muted">
           Nouvel utilisateur
         </h2>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-stretch gap-2 sm:items-center">
           <input
             type="text"
             placeholder="Prénom"
             value={newPrenom}
             onChange={(e) => setNewPrenom(e.target.value)}
-            className="h-8 w-24 rounded border border-rer-border bg-white px-2 text-sm"
+            className="h-8 w-full rounded border border-rer-border bg-white px-2 text-sm sm:w-24"
           />
           <input
             type="text"
             placeholder="Nom"
             value={newNom}
             onChange={(e) => setNewNom(e.target.value)}
-            className="h-8 w-28 rounded border border-rer-border bg-white px-2 text-sm"
+            className="h-8 w-full rounded border border-rer-border bg-white px-2 text-sm sm:w-28"
           />
           <input
             type="email"
             placeholder="email@exemple.org"
             value={newEmail}
             onChange={(e) => setNewEmail(e.target.value)}
-            className="h-8 min-w-[200px] rounded border border-rer-border bg-white px-2 text-sm"
+            className="h-8 w-full rounded border border-rer-border bg-white px-2 text-sm sm:w-auto sm:min-w-[200px]"
           />
           <select
             value={newRole}
             onChange={(e) => setNewRole(e.target.value)}
-            className="h-8 rounded border border-rer-border bg-white px-2 text-sm"
+            className="h-8 w-full rounded border border-rer-border bg-white px-2 text-sm sm:w-auto"
           >
             {ROLES.map((r) => (
               <option key={r} value={r}>
@@ -263,7 +263,7 @@ export default function AdminUsersPage() {
           <select
             value={newMutuelleId}
             onChange={(e) => setNewMutuelleId(e.target.value)}
-            className="h-8 min-w-[180px] rounded border border-rer-border bg-white px-2 text-sm"
+            className="h-8 w-full rounded border border-rer-border bg-white px-2 text-sm sm:w-auto sm:min-w-[180px]"
           >
             <option value="">Mutuelle…</option>
             {data.mutuelles.map((m) => (
@@ -276,7 +276,7 @@ export default function AdminUsersPage() {
             type="button"
             onClick={handleCreate}
             disabled={savingId === "new"}
-            className="inline-flex items-center rounded-full bg-rer-blue px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#1e3380] disabled:opacity-60"
+            className="inline-flex w-full items-center justify-center rounded-full bg-rer-blue px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#1e3380] disabled:opacity-60 sm:w-auto"
           >
             {savingId === "new" ? "Création…" : "Ajouter"}
           </button>

@@ -395,9 +395,12 @@ export function ArticlesFiltersBar({
       aria-labelledby="filtres"
       className="mb-4 space-y-2 rounded-xl bg-white p-3 shadow-sm ring-1 ring-rer-border lg:mb-6"
     >
-      <div className="flex flex-wrap items-center gap-3">
-        <div ref={searchWrapperRef} className="relative flex-1 min-w-[220px] max-w-full">
-          <div className="flex-1 min-w-[200px]">
+      <div className="flex flex-wrap items-start gap-3">
+        <div
+          ref={searchWrapperRef}
+          className="relative w-full min-w-0 max-w-full sm:flex-1 sm:min-w-[220px]"
+        >
+          <div className="w-full min-w-0">
             <label
               htmlFor="q"
               className="sr-only lg:block text-xs font-medium uppercase tracking-wide text-rer-muted"
