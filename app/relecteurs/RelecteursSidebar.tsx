@@ -54,13 +54,14 @@ export function RelecteursSidebar() {
       <button
         type="button"
         onClick={() => setMobileOpen(true)}
-        className={`fixed right-3 top-[5.5rem] z-30 inline-flex h-9 items-center rounded-lg border border-rer-border bg-white px-3 text-xs font-medium text-rer-text shadow-sm hover:bg-rer-app lg:hidden ${
+        className={`fixed bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] left-3 z-30 inline-flex h-10 w-10 items-center justify-center rounded-full border border-rer-border bg-white text-base font-semibold text-rer-text shadow-sm hover:bg-rer-app lg:hidden ${
           mobileOpen ? "hidden" : ""
         }`}
         aria-label="Ouvrir le menu admin"
         aria-expanded={mobileOpen}
       >
-        Menu admin
+        ☰
+        <span className="sr-only">Menu admin</span>
       </button>
 
       {mobileOpen && (
