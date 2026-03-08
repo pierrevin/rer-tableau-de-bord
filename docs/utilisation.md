@@ -167,7 +167,7 @@ Deux modes principaux de récupération du contenu sont disponibles :
 | `npm run db:generate` | Générer le client Prisma |
 | `npm run db:migrate` | Appliquer les migrations |
 | `npm run db:seed` | Alimenter les référentiels + comptes de test |
-| `npm run import:xlsx` | Importer les données depuis le fichier xlsx (voir doc technique) |
+| `npm run test` | Exécuter les tests smoke (Vitest) |
 
 ---
 
