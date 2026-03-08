@@ -26,6 +26,49 @@ openssl rand -base64 32
 
 ---
 
+## 1.1 Configuration e-mail (providers)
+
+Le système d’e-mail est désormais **provider-agnostique**.
+
+- `MAIL_PROVIDER=auto` (recommandé au départ)  
+  - utilise `MAIL_WEBHOOK_URL` si présent, sinon Resend si `RESEND_API_KEY` + `MAIL_FROM` sont présents, sinon SMTP si configuré, sinon `noop`.
+- `MAIL_PROVIDER=webhook`  
+  - nécessite `MAIL_WEBHOOK_URL`.
+- `MAIL_PROVIDER=resend`  
+  - nécessite `RESEND_API_KEY` et `MAIL_FROM`.
+- `MAIL_PROVIDER=smtp`  
+  - nécessite `MAIL_FROM` et :
+    - soit `SMTP_URL`,
+    - soit `SMTP_HOST` + `SMTP_PORT` (+ optionnel `SMTP_USER`/`SMTP_PASS`, `SMTP_SECURE`).
+- `MAIL_PROVIDER=noop`  
+  - n’envoie rien (utile local/tests).
+
+Exemple SMTP (variables séparées) :
+```bash
+MAIL_PROVIDER=smtp
+MAIL_FROM="RER <no-reply@votre-domaine.fr>"
+SMTP_HOST=smtp.votre-fournisseur.fr
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=votre_user
+SMTP_PASS=votre_mot_de_passe
+```
+
+Exemple Resend :
+```bash
+MAIL_PROVIDER=resend
+MAIL_FROM="RER <no-reply@votre-domaine.fr>"
+RESEND_API_KEY=re_xxx
+```
+
+Exemple webhook :
+```bash
+MAIL_PROVIDER=webhook
+MAIL_WEBHOOK_URL=https://votre-service-mail.local/api/send
+```
+
+---
+
 ## 2. Option A : Vercel (recommandé pour Next.js)
 
 1. **Compte** : [vercel.com](https://vercel.com), connexion avec GitHub.
@@ -86,5 +129,9 @@ Donc en pratique : BDD Supabase + hébergement Next.js sur Vercel/Railway/Render
 ## 6. Après déploiement
 
 - Tester : connexion, liste articles, détail, dépôt (si l’éditeur est utilisable), déconnexion.
+- Tester aussi le parcours **mot de passe oublié** :
+  - `/login` → “Mot de passe oublié ?”,
+  - réception du lien de reset,
+  - `/reset-password` avec un nouveau mot de passe valide.
 - Documenter l’URL de prod et les comptes de test dans `docs/SUIVI.md` (Sprint 5).
 - Les erreurs UX de l’éditeur de dépôt seront corrigées dans une prochaine itération.
