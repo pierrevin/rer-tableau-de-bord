@@ -1,7 +1,8 @@
 import { createHash, randomBytes } from "crypto";
+import { sendMail } from "@/lib/mail";
+import { buildPasswordResetTemplate } from "@/lib/mail/templates/password-reset";
 
 const PASSWORD_RESET_TTL_MINUTES = 60;
-const PASSWORD_RESET_WEBHOOK_URL = process.env.PASSWORD_RESET_WEBHOOK_URL?.trim();
 
 export function normalizeEmail(value: string): string {
   return value.trim().toLowerCase();
@@ -33,34 +34,18 @@ export async function sendPasswordResetEmail(options: {
   email: string;
   resetUrl: string;
 }): Promise<void> {
-  const subject = "Réinitialisation de votre mot de passe";
-  const text = [
-    "Bonjour,",
-    "",
-    "Vous avez demandé la réinitialisation de votre mot de passe.",
-    `Utilisez ce lien (valide 60 minutes) : ${options.resetUrl}`,
-    "",
-    "Si vous n'êtes pas à l'origine de cette demande, ignorez ce message.",
-  ].join("\n");
+  const template = buildPasswordResetTemplate({ resetUrl: options.resetUrl });
+  await sendMail({
+    to: options.email,
+    subject: template.subject,
+    text: template.text,
+    html: template.html,
+    tags: ["password-reset"],
+    meta: { flow: "forgot-password" },
+  });
 
-  if (PASSWORD_RESET_WEBHOOK_URL) {
-    await fetch(PASSWORD_RESET_WEBHOOK_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        to: options.email,
-        subject,
-        text,
-        html: `<p>Bonjour,</p><p>Vous avez demandé la réinitialisation de votre mot de passe.</p><p><a href="${options.resetUrl}">Réinitialiser mon mot de passe</a> (valide 60 minutes)</p><p>Si vous n'êtes pas à l'origine de cette demande, ignorez ce message.</p>`,
-      }),
-    });
-    return;
-  }
-
-  // Fallback local/dev : journalise le lien pour permettre les tests sans fournisseur d’e-mail.
+  // En dev, on garde la trace explicite du lien pour faciliter les tests manuels.
   if (process.env.NODE_ENV !== "production") {
-    console.info(
-      `[password-reset] ${options.email} -> ${options.resetUrl}`
-    );
+    console.info(`[password-reset] ${options.email} -> ${options.resetUrl}`);
   }
 }
