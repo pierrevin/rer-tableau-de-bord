@@ -18,22 +18,23 @@ type SearchParams = {
 };
 
 type PageProps = {
-  searchParams?: SearchParams;
+  searchParams?: Promise<SearchParams>;
 };
 
 export default async function AdminArticlesQueuePage({
   searchParams,
 }: PageProps) {
-  const q = searchParams?.q?.trim() || "";
-  const page = Math.max(Number(searchParams?.page) || 1, 1);
-  const etatSlug = searchParams?.etat ?? "a_relire";
-  const mutuelleParam = searchParams?.mutuelleId || "";
-  const rubriqueParam = searchParams?.rubriqueId || "";
-  const formatParam = searchParams?.formatId || "";
-  const sinceParam = searchParams?.since || "";
-  const fromParam = searchParams?.from || "";
-  const toParam = searchParams?.to || "";
-  const selectedArticleId = searchParams?.article || "";
+  const params = (await searchParams) ?? {};
+  const q = params.q?.trim() || "";
+  const page = Math.max(Number(params.page) || 1, 1);
+  const etatSlug = params.etat ?? "a_relire";
+  const mutuelleParam = params.mutuelleId || "";
+  const rubriqueParam = params.rubriqueId || "";
+  const formatParam = params.formatId || "";
+  const sinceParam = params.since || "";
+  const fromParam = params.from || "";
+  const toParam = params.to || "";
+  const selectedArticleId = params.article || "";
 
   const take = 20;
   const skip = (page - 1) * take;

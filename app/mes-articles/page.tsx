@@ -15,7 +15,7 @@ type SearchParams = {
 };
 
 type PageProps = {
-  searchParams?: SearchParams;
+  searchParams?: Promise<SearchParams>;
 };
 
 function buildLastActionLabel(options: {
@@ -77,6 +77,7 @@ function buildLastActionLabel(options: {
 }
 
 export default async function MesArticlesPage({ searchParams }: PageProps) {
+  const params = (await searchParams) ?? {};
   const sessionUser = await getSessionUser();
 
   if (!sessionUser) {
@@ -85,11 +86,11 @@ export default async function MesArticlesPage({ searchParams }: PageProps) {
 
   const auteurId = sessionUser.auteurId;
 
-  const rawPage = searchParams?.page;
+  const rawPage = params.page;
   const page = Math.max(Number(rawPage) || 1, 1);
-  const etatSlug = searchParams?.etat ?? "";
-  const mutuelleIdParam = searchParams?.mutuelleId ?? "";
-  const sort = searchParams?.sort ?? "lastModifiedDesc";
+  const etatSlug = params.etat ?? "";
+  const mutuelleIdParam = params.mutuelleId ?? "";
+  const sort = params.sort ?? "lastModifiedDesc";
 
   const take = 20;
   const skip = (page - 1) * take;
