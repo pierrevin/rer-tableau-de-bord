@@ -1,6 +1,7 @@
  "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { ArticleReadSidePanel } from "@/app/articles/ArticleReadSidePanel";
 import {
   getFormatBadgeClasses,
@@ -207,12 +208,14 @@ export function ArticlesTableView({
               <tr key={article.id} className="hover:bg-rer-app">
                 <td className="px-3 py-2 align-top">
                   {article.lienPhoto ? (
-                    <div className="h-14 w-14 overflow-hidden rounded-lg border border-rer-border bg-rer-app">
-                      <img
+                    <div className="relative h-14 w-14 overflow-hidden rounded-lg border border-rer-border bg-rer-app">
+                      <Image
                         src={article.lienPhoto}
                         alt={article.legendePhoto || article.titre}
-                        className="h-full w-full object-cover"
-                        loading="lazy"
+                        fill
+                        sizes="56px"
+                        unoptimized
+                        className="object-cover"
                       />
                     </div>
                   ) : (

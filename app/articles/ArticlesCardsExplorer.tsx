@@ -1,6 +1,7 @@
  "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useArticleShortcuts } from "./useArticleShortcuts";
@@ -484,9 +485,12 @@ function ArticleDetailContent({
           {detail.lienPhoto && (
             <div className="space-y-2">
               <div className="overflow-hidden rounded-lg border border-rer-border bg-rer-app">
-                <img
+                <Image
                   src={detail.lienPhoto}
                   alt={detail.legendePhoto || detail.titre}
+                  width={1200}
+                  height={700}
+                  unoptimized
                   className="h-auto w-full max-h-64 object-cover"
                 />
               </div>
@@ -794,11 +798,13 @@ export function ArticlesExplorerView({
                 <article className="flex h-full flex-1 items-stretch gap-3 overflow-hidden rounded-2xl">
                   <div className="relative hidden w-32 flex-none bg-rer-app sm:block">
                     {article.lienPhoto ? (
-                      <img
+                      <Image
                         src={article.lienPhoto}
                         alt={article.legendePhoto || article.titre}
-                        className="h-full w-full object-cover"
-                        loading="lazy"
+                        fill
+                        sizes="128px"
+                        unoptimized
+                        className="object-cover"
                       />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center text-[10px] text-rer-muted">

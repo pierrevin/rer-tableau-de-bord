@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { ingestDebug } from "@/lib/ingest-debug";
 import { getEtatBadgeClasses } from "../articles/ArticlesCardsExplorer";
 import ArticleEditorCard, {
@@ -693,6 +694,7 @@ export function AdminReviewExplorer({
   const [selectedBulkIds, setSelectedBulkIds] = useState<string[]>([]);
   const [listCollapsed, setListCollapsed] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const visibleArticlesRef = useRef<ArticleSummary[]>(visibleArticles);
 
   // Met à jour la liste quand les props changent
   useEffect(() => {
@@ -707,6 +709,10 @@ export function AdminReviewExplorer({
       return initialSelectedId || (sorted[0]?.id ?? null);
     });
   }, [articles, total, initialPage, initialSelectedId]);
+
+  useEffect(() => {
+    visibleArticlesRef.current = visibleArticles;
+  }, [visibleArticles]);
 
   const selectedArticle = useMemo(
     () => visibleArticles.find((a) => a.id === selectedId) || null,
@@ -798,8 +804,8 @@ export function AdminReviewExplorer({
           setDetail(null);
           setError(result.error);
           setSelectedId((prev) => {
-            if (!prev || visibleArticles.some((a) => a.id === prev)) return prev;
-            return visibleArticles[0]?.id ?? null;
+            if (!prev || visibleArticlesRef.current.some((a) => a.id === prev)) return prev;
+            return visibleArticlesRef.current[0]?.id ?? null;
           });
           return;
         }
