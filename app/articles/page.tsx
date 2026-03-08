@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { getSessionUser, canEditArticles } from "@/lib/auth";
+import { getSessionUser } from "@/lib/auth";
 import { ArticlesExplorerView } from "./ArticlesCardsExplorer";
 import { ArticlesCardsView } from "./ArticlesCardsView";
 import { ArticlesTableView } from "./ArticlesTableView";
@@ -38,9 +38,6 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
     select: { dateDepot: true, createdAt: true },
   });
 
-  const sessionUser = await getSessionUser();
-  const showEtat = canEditArticles(sessionUser?.role);
-
   const q = params.q?.trim() || "";
   const page = Math.max(Number(params.page) || 1, 1);
   const etatSlug = params.etat || "";
@@ -53,6 +50,7 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
   const selectedArticleId = params.article || "";
   const mineParam = params.mine === "1" ? "1" : "";
   const backParam = params.back || "";
+  const sessionUser = mineParam === "1" ? await getSessionUser() : null;
   const rawView = params.view;
   const view: "cards" | "explorer" | "table" =
     rawView === "table" || rawView === "cards" || rawView === "explorer"
@@ -132,7 +130,7 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
     where.formatId = { in: formatIds };
   }
 
-  const [articles, total, etats, mutuelles] = await Promise.all([
+  const [articles, total] = await Promise.all([
     prisma.article.findMany({
       where,
       select: {
@@ -164,8 +162,6 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
       take,
     }),
     prisma.article.count({ where }),
-    prisma.etat.findMany({ orderBy: { ordre: "asc" } }),
-    prisma.mutuelle.findMany({ orderBy: { nom: "asc" } }),
   ]);
 
   const articleSummaries = articles.map((article) => ({

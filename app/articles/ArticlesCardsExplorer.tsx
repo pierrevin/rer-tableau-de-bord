@@ -672,17 +672,19 @@ export function ArticlesExplorerView({
       return;
     }
 
-    let cancelled = false;
+    const controller = new AbortController();
     setLoading(true);
     setError(null);
+    setDetail(null);
 
-    fetch(`/api/articles/${selectedId}`)
+    fetch(`/api/articles/${selectedId}?scope=preview`, {
+      signal: controller.signal,
+    })
       .then((res) => {
         if (!res.ok) return null;
         return res.json();
       })
       .then((data: ArticleDetail | null) => {
-        if (cancelled) return;
         if (!data) {
           setDetail(null);
           setError("Article introuvable ou erreur de chargement.");
@@ -691,32 +693,33 @@ export function ArticlesExplorerView({
         }
       })
       .catch(() => {
-        if (!cancelled) {
-          setDetail(null);
-          setError("Erreur lors du chargement de l’article.");
-        }
+        if (controller.signal.aborted) return;
+        setDetail(null);
+        setError("Erreur lors du chargement de l’article.");
       })
       .finally(() => {
-        if (!cancelled) {
-          setLoading(false);
-        }
+        if (controller.signal.aborted) return;
+        setLoading(false);
       });
 
     return () => {
-      cancelled = true;
+      controller.abort();
     };
   }, [selectedId]);
 
   const updateUrlSelection = (id: string | null) => {
-    if (!searchParams) return;
-    const params = new URLSearchParams(searchParams.toString());
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(
+      searchParams?.toString() ?? window.location.search
+    );
     if (id) {
       params.set("article", id);
     } else {
       params.delete("article");
     }
     const query = params.toString();
-    router.replace(query ? `?${query}` : "?", { scroll: false });
+    const nextUrl = `${window.location.pathname}${query ? `?${query}` : ""}`;
+    window.history.replaceState(window.history.state, "", nextUrl);
   };
 
   const handleSelect = (id: string) => {

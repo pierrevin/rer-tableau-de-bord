@@ -777,11 +777,13 @@ export function AdminReviewExplorer({
       return;
     }
 
-    let cancelled = false;
+    const controller = new AbortController();
     setLoading(true);
     setError(null);
 
-    fetch(`/api/articles/${selectedId}`)
+    fetch(`/api/articles/${selectedId}`, {
+      signal: controller.signal,
+    })
       .then(async (res) => {
         const data = await res.json().catch(() => null);
         if (!res.ok) {
@@ -794,7 +796,7 @@ export function AdminReviewExplorer({
         return { error: "Réponse invalide." };
       })
       .then((result: { detail?: ArticleDetail; error?: string } | null) => {
-        if (cancelled) return;
+        if (controller.signal.aborted) return;
         if (!result) {
           setDetail(null);
           setError("Erreur de chargement.");
@@ -815,23 +817,21 @@ export function AdminReviewExplorer({
         }
       })
       .catch(() => {
-        if (!cancelled) {
-          setDetail(null);
-          setError("Erreur lors du chargement de l’article.");
-        }
+        if (controller.signal.aborted) return;
+        setDetail(null);
+        setError("Erreur lors du chargement de l’article.");
       })
       .finally(() => {
-        if (!cancelled) {
-          setLoading(false);
-        }
+        if (controller.signal.aborted) return;
+        setLoading(false);
       });
 
     return () => {
-      cancelled = true;
+      controller.abort();
     };
   }, [selectedId]);
 
-  const updateUrl = (updates: Record<string, string | null>) => {
+  const updateFilterUrl = (updates: Record<string, string | null>) => {
     if (!searchParams) return;
     const params = new URLSearchParams(searchParams.toString());
     Object.entries(updates).forEach(([key, value]) => {
@@ -846,17 +846,35 @@ export function AdminReviewExplorer({
     router.replace(`/admin/articles?${query}`, { scroll: false });
   };
 
+  const syncSelectedArticleInUrl = (id: string | null) => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(
+      searchParams?.toString() ?? window.location.search
+    );
+    if (id) {
+      params.set("article", id);
+    } else {
+      params.delete("article");
+    }
+    const query = params.toString();
+    window.history.replaceState(
+      window.history.state,
+      "",
+      `/admin/articles${query ? `?${query}` : ""}`
+    );
+  };
+
   const handleEtatFilterClick = (slug: string | null) => {
     if (slug === null) {
-      updateUrl({ etat: "", article: null });
+      updateFilterUrl({ etat: "", article: null });
     } else {
-      updateUrl({ etat: slug, article: null });
+      updateFilterUrl({ etat: slug, article: null });
     }
   };
 
   const handleSelect = (id: string) => {
     setSelectedId(id);
-    updateUrl({ article: id });
+    syncSelectedArticleInUrl(id);
     if (typeof window !== "undefined" && window.innerWidth < 1024) {
       setIsDrawerOpen(true);
     }
@@ -981,7 +999,7 @@ export function AdminReviewExplorer({
       if (selectedId && selectedBulkIds.includes(selectedId)) {
         const nextId = remaining[0]?.id ?? null;
         setSelectedId(nextId);
-        updateUrl({ article: nextId });
+        syncSelectedArticleInUrl(nextId);
       }
       setBulkMode(false);
       setSelectedBulkIds([]);

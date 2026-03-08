@@ -10,6 +10,30 @@ const historiqueUserSelect = {
   role: true,
 };
 
+const articlePreviewSelect = {
+  id: true,
+  titre: true,
+  chapo: true,
+  contenu: true,
+  contenuJson: true,
+  lienPhoto: true,
+  legendePhoto: true,
+  postRs: true,
+  dateDepot: true,
+  datePublication: true,
+  createdAt: true,
+  auteurId: true,
+  mutuelleId: true,
+  rubriqueId: true,
+  formatId: true,
+  lienGoogleDoc: true,
+  auteur: { select: { prenom: true, nom: true } },
+  mutuelle: { select: { nom: true } },
+  rubrique: { select: { libelle: true } },
+  format: { select: { libelle: true } },
+  etat: { select: { libelle: true, slug: true } },
+};
+
 function extractFirstImageSrc(html: string | null): string | null {
   if (!html) return null;
   const matches = Array.from(
@@ -31,20 +55,28 @@ export async function GET(
   }
 
   const { id } = await params;
-  const article = await prisma.article.findUnique({
-    where: { id },
-    include: {
-      auteur: true,
-      mutuelle: true,
-      rubrique: true,
-      format: true,
-      etat: true,
-      historiques: {
-        orderBy: { createdAt: "desc" },
-        include: { etat: true, user: { select: historiqueUserSelect } },
-      },
-    },
-  });
+  const scope = request.nextUrl.searchParams.get("scope");
+  const article = await prisma.article.findUnique(
+    scope === "preview"
+      ? {
+          where: { id },
+          select: articlePreviewSelect,
+        }
+      : {
+          where: { id },
+          include: {
+            auteur: true,
+            mutuelle: true,
+            rubrique: true,
+            format: true,
+            etat: true,
+            historiques: {
+              orderBy: { createdAt: "desc" },
+              include: { etat: true, user: { select: historiqueUserSelect } },
+            },
+          },
+        }
+  );
   if (!article) return NextResponse.json({ error: "Article introuvable" }, { status: 404 });
   return NextResponse.json(article);
 }

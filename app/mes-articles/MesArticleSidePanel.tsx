@@ -151,25 +151,29 @@ export function MesArticleSidePanel({
 
   useEffect(() => {
     if (!open || !articleId) return;
-    let cancelled = false;
+    const controller = new AbortController();
     setLoading(true);
     setError(null);
-    fetch(`/api/articles/${articleId}`)
+    fetch(`/api/articles/${articleId}?scope=preview`, {
+      signal: controller.signal,
+    })
       .then((r) => {
         if (!r.ok) throw new Error("Article introuvable");
         return r.json();
       })
       .then((data: ArticleDetail) => {
-        if (!cancelled) setArticle(data);
+        setArticle(data);
       })
       .catch((e) => {
-        if (!cancelled) setError(e.message ?? "Erreur de chargement");
+        if (controller.signal.aborted) return;
+        setError(e.message ?? "Erreur de chargement");
       })
       .finally(() => {
-        if (!cancelled) setLoading(false);
+        if (controller.signal.aborted) return;
+        setLoading(false);
       });
     return () => {
-      cancelled = true;
+      controller.abort();
     };
   }, [articleId, open]);
 
