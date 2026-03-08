@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSessionUser } from "@/lib/auth";
+import { canEditArticles, getSessionUser } from "@/lib/auth";
 import { ingestDebug } from "@/lib/ingest-debug";
 
 function extractFirstImageSrc(html: string | null): string | null {
@@ -158,6 +158,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const sessionUser = await getSessionUser(request);
+    if (!sessionUser) {
+      return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+    }
+
     const body = await request.json();
     const {
       titre,
@@ -211,6 +216,14 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+    const safeAuteurId = auteurId.trim();
+    const isEditor = canEditArticles(sessionUser.role);
+    if (!isEditor && sessionUser.auteurId !== safeAuteurId) {
+      return NextResponse.json(
+        { error: "Vous ne pouvez créer des articles que pour votre propre profil auteur." },
+        { status: 403 }
+      );
+    }
     if (!draftMode && (!safeTitre || !safeContenuHtml)) {
       return NextResponse.json(
         { error: "Champs requis : titre, contenu, auteurId" },
@@ -254,7 +267,7 @@ export async function POST(request: NextRequest) {
         chapo: chapo?.trim() || null,
         contenu: safeContenuHtml,
         contenuJson: contenuJson ?? null,
-        auteurId: auteurId.trim(),
+        auteurId: safeAuteurId,
         mutuelleId: mutuelleId || null,
         rubriqueId: rubriqueId || null,
         formatId: formatId || null,
