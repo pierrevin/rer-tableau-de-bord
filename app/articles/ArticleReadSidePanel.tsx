@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
+import { getArticleStatusLabel } from "@/lib/article-status";
 import {
   getEtatBadgeClasses,
   getFormatBadgeClasses,
@@ -94,6 +95,7 @@ export function ArticleReadSidePanel({
   onClose,
   backParam = "articles",
 }: ArticleReadSidePanelProps) {
+  const statusContext = backParam === "mes-articles" ? "author" : "public";
   const [article, setArticle] = useState<ArticleDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -211,7 +213,8 @@ export function ArticleReadSidePanel({
                       <span
                         className={getEtatBadgeClasses(article.etat.slug, false)}
                       >
-                        {article.etat.libelle}
+                        {getArticleStatusLabel(article.etat.slug, statusContext) ??
+                          article.etat.libelle}
                       </span>
                     )}
                     {article.auteur &&

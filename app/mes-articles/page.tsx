@@ -1,6 +1,13 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth";
+import {
+  ARTICLE_STATUS_OPTIONS,
+  getArticleStatusLabel,
+  getStatusWhereClause,
+  isPublishedStatus,
+  normalizeArticleStatusSlug,
+} from "@/lib/article-status";
 import { redirect } from "next/navigation";
 import { MesArticlesFiltersBar } from "./MesArticlesFiltersBar";
 import { MesArticlesTable } from "./MesArticlesTable";
@@ -40,32 +47,16 @@ function buildLastActionLabel(options: {
 
   if (etatSlug === "a_relire") {
     return {
-      label: "Déposé",
-      at: baseDate,
-    };
-  }
-
-  if (etatSlug === "corrige") {
-    return {
-      label: lastHistoriqueUserEmail
-        ? `Corrigé par ${lastHistoriqueUserEmail}`
-        : "Corrigé",
-      at: baseDate,
-    };
-  }
-
-  if (etatSlug === "valide") {
-    return {
-      label: lastHistoriqueUserEmail
-        ? `Validé par ${lastHistoriqueUserEmail}`
-        : "Validé",
+      label: "Soumis à relecture",
       at: baseDate,
     };
   }
 
   if (etatSlug === "publie") {
     return {
-      label: "Publié",
+      label: lastHistoriqueUserEmail
+        ? `Publié par ${lastHistoriqueUserEmail}`
+        : "Publié",
       at: baseDate,
     };
   }
@@ -104,8 +95,9 @@ export default async function MesArticlesPage({ searchParams }: PageProps) {
     where.auteurId = "__none__";
   }
 
-  if (etatSlug) {
-    where.etat = { slug: etatSlug };
+  const etatWhere = getStatusWhereClause(etatSlug);
+  if (etatWhere) {
+    where.etat = etatWhere;
   }
 
   if (mutuelleIdParam) {
@@ -152,22 +144,15 @@ export default async function MesArticlesPage({ searchParams }: PageProps) {
 
   const totalPages = Math.max(Math.ceil(total / take), 1);
 
-  const etatById = new Map(
-    etats.map((etat) => [
-      etat.id,
-      {
-        id: etat.id,
-        slug: etat.slug,
-        libelle: etat.libelle,
-      },
-    ])
-  );
+  const etatById = new Map(etats.map((etat) => [etat.id, etat]));
 
   const statusCountsBySlug: Record<string, number> = {};
   for (const group of groupedByEtat) {
     const etat = group.etatId ? etatById.get(group.etatId) : null;
-    if (!etat?.slug) continue;
-    statusCountsBySlug[etat.slug] = (statusCountsBySlug[etat.slug] ?? 0) + group._count._all;
+    const normalizedSlug = normalizeArticleStatusSlug(etat?.slug);
+    if (!normalizedSlug) continue;
+    statusCountsBySlug[normalizedSlug] =
+      (statusCountsBySlug[normalizedSlug] ?? 0) + group._count._all;
   }
 
   const statusParts: string[] = [];
@@ -178,9 +163,8 @@ export default async function MesArticlesPage({ searchParams }: PageProps) {
     }
   };
 
-  pushStatus("a_relire", "en relecture");
-  pushStatus("corrige", "corrigés");
-  pushStatus("valide", "validés");
+  pushStatus("brouillon", "brouillon(s)");
+  pushStatus("a_relire", "soumis à relecture");
   pushStatus("publie", "publiés");
 
   const statusSummary =
@@ -190,18 +174,17 @@ export default async function MesArticlesPage({ searchParams }: PageProps) {
 
   const rows = articles.map((article) => {
     const lastHistorique = article.historiques[0] ?? null;
-    const etatSlugForRow = article.etat?.slug ?? null;
+    const etatSlugForRow = normalizeArticleStatusSlug(article.etat?.slug ?? null);
     const { label: lastActionLabel, at: lastActionAt } = buildLastActionLabel({
       etatSlug: etatSlugForRow,
-      etatLibelle: article.etat?.libelle ?? null,
+      etatLibelle: getArticleStatusLabel(article.etat?.slug, "author"),
       lastHistoriqueAt: lastHistorique ? lastHistorique.createdAt : null,
       lastHistoriqueUserEmail: lastHistorique?.user?.email ?? null,
       dateDepot: article.dateDepot ?? null,
       createdAt: article.createdAt,
     });
 
-    const canEdit =
-      etatSlugForRow !== "valide" && etatSlugForRow !== "publie";
+    const canEdit = !isPublishedStatus(etatSlugForRow);
 
     return {
       id: article.id,
@@ -211,7 +194,7 @@ export default async function MesArticlesPage({ searchParams }: PageProps) {
       rubrique: article.rubrique?.libelle ?? null,
       format: article.format?.libelle ?? null,
       mutuelle: article.mutuelle?.nom ?? null,
-      etatLibelle: article.etat?.libelle ?? null,
+      etatLibelle: getArticleStatusLabel(article.etat?.slug, "author"),
       etatSlug: etatSlugForRow,
       lastAction: lastActionLabel,
       lastActionAt: lastActionAt ? lastActionAt.toISOString() : null,
@@ -241,10 +224,10 @@ export default async function MesArticlesPage({ searchParams }: PageProps) {
 
         <MesArticlesFiltersBar
           total={total}
-          etats={etats.map((etat) => ({
-            id: etat.id,
+          etats={ARTICLE_STATUS_OPTIONS.map((etat) => ({
+            id: etat.slug,
             slug: etat.slug,
-            libelle: etat.libelle,
+            libelle: getArticleStatusLabel(etat.slug, "author") ?? etat.libelle,
           }))}
           currentEtatSlug={etatSlug}
           currentSort={sort}

@@ -13,6 +13,7 @@ import {
   getFormatBadgeClasses,
   getRubriqueBadgeClasses,
 } from "@/app/articles/ArticlesCardsExplorer";
+import { getArticleStatusLabel } from "@/lib/article-status";
 
 function transformEmbeds(html: string): string {
   if (typeof window === "undefined" || !html) return html;
@@ -397,7 +398,8 @@ export function MesArticleSidePanel({
                       <span
                         className={getEtatBadgeClasses(article.etat.slug, false)}
                       >
-                        {article.etat.libelle}
+                        {getArticleStatusLabel(article.etat.slug, "author") ??
+                          article.etat.libelle}
                       </span>
                     )}
                     {article.auteur &&

@@ -77,6 +77,7 @@ export function ArticlesCardsView({
     const params = new URLSearchParams();
     params.set("page", String(page));
     params.set("limit", String(pageSize));
+    if (mine !== "1") params.set("scope", "public");
     if (q) params.set("q", q);
     if (etatSlug) params.set("etat", etatSlug);
     if (mutuelleId) params.set("mutuelleId", mutuelleId);

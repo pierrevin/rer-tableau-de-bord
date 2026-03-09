@@ -84,28 +84,10 @@ export function MesArticlesTable({
     setSelectedIds([]);
   };
 
-  const handleEditClick = async (article: MesArticleRow) => {
-    try {
-      if (
-        article.etatSlug &&
-        article.etatSlug !== "brouillon" &&
-        article.etatSlug !== "a_relire"
-      ) {
-        await fetch(`/api/articles/${article.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ etatSlug: "a_relire" }),
-        });
-      }
-      setSelectedId(article.id);
-      setPanelMode("edit");
-      setPanelOpen(true);
-    } catch {
-      // en cas d'erreur réseau sur le PATCH, on tente quand même d’ouvrir l’explorateur
-      setSelectedId(article.id);
-      setPanelMode("edit");
-      setPanelOpen(true);
-    }
+  const handleEditClick = (article: MesArticleRow) => {
+    setSelectedId(article.id);
+    setPanelMode("edit");
+    setPanelOpen(true);
   };
 
   const openPanelView = (articleId: string) => {

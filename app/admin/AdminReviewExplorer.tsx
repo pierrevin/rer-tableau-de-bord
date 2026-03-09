@@ -5,6 +5,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { ingestDebug } from "@/lib/ingest-debug";
+import {
+  type ArticleStatusOption,
+  getArticleStatusLabel,
+  normalizeArticleStatusSlug,
+} from "@/lib/article-status";
 import { getEtatBadgeClasses } from "../articles/ArticlesCardsExplorer";
 import ArticleEditorCard, {
   ArticleEditorReferentiels,
@@ -27,12 +32,7 @@ type ArticleSummary = {
   createdAt: string;
 };
 
-type Etat = {
-  id: string;
-  slug: string;
-  libelle: string;
-  ordre: number;
-};
+type Etat = ArticleStatusOption;
 
 type ArticleDetail = {
   id: string;
@@ -58,7 +58,7 @@ type ArticleDetail = {
   historiques: {
     id: string;
     createdAt: string;
-    etat: { libelle: string } | null;
+    etat: { libelle: string; slug: string } | null;
     user: { email: string | null } | null;
     commentaire: string | null;
   }[];
@@ -182,7 +182,7 @@ function AdminArticlePanel({
     setLastSavedAt(new Date());
   };
 
-  const handleChangeEtat = async (targetEtatId: string) => {
+  const handleChangeEtat = async (targetEtatSlug: string) => {
     if (!detail || updatingEtat) return;
     setUpdatingEtat(true);
     try {
@@ -192,13 +192,13 @@ function AdminArticlePanel({
         hypothesisId: "H_STATE_CHANGE",
         location: "app/admin/AdminReviewExplorer.tsx:handleChangeEtat:beforeFetch",
         message: "handleChangeEtat called",
-        data: { articleId: detail.id, targetEtatId },
+        data: { articleId: detail.id, targetEtatSlug },
       });
 
       const res = await fetch(`/api/articles/${detail.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ etatId: targetEtatId }),
+        body: JSON.stringify({ etatSlug: targetEtatSlug }),
       });
       ingestDebug({
         sessionId: "fb943b",
@@ -221,7 +221,9 @@ function AdminArticlePanel({
   };
 
   const sortedEtats = [...etats].sort((a, b) => a.ordre - b.ordre);
-  const currentSlug = detail?.etat?.slug ?? selectedArticle?.etat?.slug ?? null;
+  const currentSlug = normalizeArticleStatusSlug(
+    detail?.etat?.slug ?? selectedArticle?.etat?.slug ?? null
+  );
 
   const buildInitialHtml = useMemo(() => {
     if (!detail) return "";
@@ -365,18 +367,12 @@ function AdminArticlePanel({
     }
   };
 
-  const currentEtatId = detail?.etat
-    ? etats.find((e) => e.slug === detail.etat?.slug)?.id ?? ""
-    : "";
+  const currentEtatSlug = currentSlug ?? "";
 
   const getEtatSelectStyle = (slug: string | null): React.CSSProperties => {
-    switch (slug) {
+    switch (normalizeArticleStatusSlug(slug)) {
       case "a_relire":
         return { borderColor: "rgba(250,204,21,0.6)", backgroundColor: "#FEF9C3", color: "#854D0E" };
-      case "corrige":
-        return { borderColor: "#BFDBFE", backgroundColor: "#EFF6FF", color: "#1D4ED8" };
-      case "valide":
-        return { borderColor: "transparent", backgroundColor: "#D1FAE5", color: "#047857" };
       case "publie":
         return { borderColor: "#22C55E", backgroundColor: "#16A34A", color: "#fff" };
       default:
@@ -402,17 +398,17 @@ function AdminArticlePanel({
           <label className="inline-flex h-9 min-h-9 items-center gap-2 text-[11px] text-rer-muted">
             <span>État :</span>
             <select
-              value={currentEtatId}
+              value={currentEtatSlug}
               disabled={updatingEtat}
               onChange={(e) => {
-                const id = e.target.value;
-                if (id) handleChangeEtat(id);
+                const slug = e.target.value;
+                if (slug) handleChangeEtat(slug);
               }}
               className="select-action min-w-[140px]"
               style={getEtatSelectStyle(currentSlug)}
             >
               {sortedEtats.map((etat) => (
-                <option key={etat.id} value={etat.id}>
+                <option key={etat.slug} value={etat.slug}>
                   {etat.libelle}
                 </option>
               ))}
@@ -633,7 +629,8 @@ function AdminArticlePanel({
                     </span>
                     {h.etat && (
                       <span className="text-[11px] font-medium">
-                        {h.etat.libelle}
+                        {getArticleStatusLabel(h.etat.slug, "admin") ??
+                          h.etat.libelle}
                       </span>
                     )}
                     {h.user?.email && (
@@ -899,20 +896,22 @@ export function AdminReviewExplorer({
   }, []);
 
   const handleEtatUpdated = (etatSlugUpdated: string | null) => {
-    const targetEtat = etats.find((e) => e.slug === etatSlugUpdated) ?? null;
+    const normalizedSlug = normalizeArticleStatusSlug(etatSlugUpdated);
+    const targetEtat = etats.find((e) => e.slug === normalizedSlug) ?? null;
 
     setVisibleArticles((prev) =>
       prev.map((a) =>
         a.id === selectedId
           ? {
               ...a,
-              etat: etatSlugUpdated
+              etat: normalizedSlug
                 ? {
                     libelle:
                       targetEtat?.libelle ??
+                      getArticleStatusLabel(normalizedSlug, "admin") ??
                       a.etat?.libelle ??
-                      etatSlugUpdated,
-                    slug: etatSlugUpdated,
+                      normalizedSlug,
+                    slug: normalizedSlug,
                   }
                 : null,
             }
@@ -922,7 +921,7 @@ export function AdminReviewExplorer({
 
     setDetail((prev) => {
       if (!prev) return prev;
-      if (!etatSlugUpdated) {
+      if (!normalizedSlug) {
         return { ...prev, etat: null };
       }
       return {
@@ -930,9 +929,10 @@ export function AdminReviewExplorer({
         etat: {
           libelle:
             targetEtat?.libelle ??
+            getArticleStatusLabel(normalizedSlug, "admin") ??
             prev.etat?.libelle ??
-            etatSlugUpdated,
-          slug: etatSlugUpdated,
+            normalizedSlug,
+          slug: normalizedSlug,
         },
       };
     });
@@ -1025,7 +1025,7 @@ export function AdminReviewExplorer({
         </button>
         {sortedEtats.map((etat) => (
           <button
-            key={etat.id}
+            key={etat.slug}
             type="button"
             onClick={() => handleEtatFilterClick(etat.slug)}
             className={`chip-filter ${etat.slug === etatSlug ? "chip-filter--active" : ""}`}
@@ -1154,7 +1154,10 @@ export function AdminReviewExplorer({
                                 false
                               )} shrink-0 whitespace-nowrap`}
                             >
-                              {article.etat.libelle}
+                              {getArticleStatusLabel(
+                                article.etat.slug,
+                                "admin"
+                              ) ?? article.etat.libelle}
                             </span>
                           )}
                           <p className="line-clamp-2 text-sm font-semibold text-rer-text">
