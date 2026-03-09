@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { ARTICLE_STATUS_OPTIONS, getStatusWhereClause } from "@/lib/article-status";
 import { AdminReviewExplorer } from "../AdminReviewExplorer";
 
 export const dynamic = "force-dynamic";
@@ -49,8 +50,9 @@ export default async function AdminArticlesQueuePage({
     ];
   }
 
-  if (etatSlug) {
-    where.etat = { slug: etatSlug };
+  const etatWhere = getStatusWhereClause(etatSlug);
+  if (etatWhere) {
+    where.etat = etatWhere;
   }
 
   const createdAtFilter: any = {};
@@ -99,7 +101,7 @@ export default async function AdminArticlesQueuePage({
     where.formatId = { in: formatIds };
   }
 
-  const [articles, total, etats] = await Promise.all([
+  const [articles, total] = await Promise.all([
     prisma.article.findMany({
       where,
       include: {
@@ -117,7 +119,6 @@ export default async function AdminArticlesQueuePage({
       take,
     }),
     prisma.article.count({ where }),
-    prisma.etat.findMany({ orderBy: { ordre: "asc" } }),
   ]);
 
   const articleSummaries = articles.map((article) => ({
@@ -162,7 +163,7 @@ export default async function AdminArticlesQueuePage({
         from={fromParam}
         to={toParam}
         initialSelectedId={selectedArticleId || undefined}
-        etats={etats}
+        etats={ARTICLE_STATUS_OPTIONS}
       />
     </section>
   );

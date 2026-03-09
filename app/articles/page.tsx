@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth";
+import { getStatusWhereClause } from "@/lib/article-status";
 import { ArticlesExplorerView } from "./ArticlesCardsExplorer";
 import { ArticlesCardsView } from "./ArticlesCardsView";
 import { ArticlesTableView } from "./ArticlesTableView";
@@ -30,7 +31,10 @@ type PageProps = {
 
 export default async function ArticlesPage({ searchParams }: PageProps) {
   const params = (await searchParams) ?? {};
+  const mineParam = params.mine === "1" ? "1" : "";
+  const effectiveEtatSlug = mineParam === "1" ? params.etat || "" : params.etat || "publie";
   const lastArticle = await prisma.article.findFirst({
+    where: mineParam === "1" ? undefined : { etat: getStatusWhereClause("publie") },
     orderBy: [
       { dateDepot: "desc" },
       { createdAt: "desc" },
@@ -40,7 +44,7 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
 
   const q = params.q?.trim() || "";
   const page = Math.max(Number(params.page) || 1, 1);
-  const etatSlug = params.etat || "";
+  const etatSlug = effectiveEtatSlug;
   const mutuelleParam = params.mutuelleId || "";
   const rubriqueParam = params.rubriqueId || "";
   const formatParam = params.formatId || "";
@@ -48,7 +52,6 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
   const fromParam = params.from || "";
   const toParam = params.to || "";
   const selectedArticleId = params.article || "";
-  const mineParam = params.mine === "1" ? "1" : "";
   const backParam = params.back || "";
   const sessionUser = mineParam === "1" ? await getSessionUser() : null;
   const rawView = params.view;
@@ -70,8 +73,9 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
     ];
   }
 
-  if (etatSlug) {
-    where.etat = { slug: etatSlug };
+  const etatWhere = getStatusWhereClause(etatSlug);
+  if (etatWhere) {
+    where.etat = etatWhere;
   }
 
   if (mineParam === "1") {

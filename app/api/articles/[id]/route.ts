@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser, canEditArticles } from "@/lib/auth";
 import { ingestDebug } from "@/lib/ingest-debug";
+import {
+  isDraftStatus,
+  isPublishedStatus,
+  normalizeArticleStatusSlug,
+} from "@/lib/article-status";
 import { sanitizeArticleHtml } from "@/lib/sanitizeArticleHtml";
 
 const historiqueUserSelect = {
@@ -90,9 +95,35 @@ export async function PATCH(
   }
 
   const { id } = await params;
+  const ensureEtatBySlug = async (slug: "brouillon" | "a_relire" | "publie") => {
+    let etat = await prisma.etat.findFirst({ where: { slug } });
+    if (etat) return etat;
+    const config =
+      slug === "brouillon"
+        ? { libelle: "Brouillon", ordre: -1 }
+        : slug === "a_relire"
+        ? { libelle: "À relire", ordre: 1 }
+        : { libelle: "Publié", ordre: 2 };
+    return prisma.etat.create({
+      data: {
+        slug,
+        libelle: config.libelle,
+        ordre: config.ordre,
+      },
+    });
+  };
   const existing = await prisma.article.findUnique({
     where: { id },
-    select: { id: true, auteurId: true, etatId: true, datePublication: true, dateDepot: true, contenu: true, lienPhoto: true },
+    select: {
+      id: true,
+      auteurId: true,
+      etatId: true,
+      datePublication: true,
+      dateDepot: true,
+      contenu: true,
+      lienPhoto: true,
+      etat: { select: { slug: true } },
+    },
   });
   if (!existing) return NextResponse.json({ error: "Article introuvable" }, { status: 404 });
   const isEditor = canEditArticles(user.role);
@@ -100,6 +131,12 @@ export async function PATCH(
   if (!isEditor && !isAuthor) {
     return NextResponse.json(
       { error: "Vous n’êtes pas autorisé à modifier cet article." },
+      { status: 403 }
+    );
+  }
+  if (!isEditor && isPublishedStatus(existing.etat?.slug)) {
+    return NextResponse.json(
+      { error: "Les auteurs ne peuvent plus modifier un article publié." },
       { status: 403 }
     );
   }
@@ -133,6 +170,21 @@ export async function PATCH(
   } = body;
 
   const data: Record<string, unknown> = {};
+  const hasEditableFieldChange = [
+    titre,
+    chapo,
+    contenu,
+    contenuHtml,
+    contenuJson,
+    auteurId,
+    mutuelleId,
+    rubriqueId,
+    formatId,
+    legendePhoto,
+    postRs,
+    lienPhoto,
+    lienGoogleDoc,
+  ].some((value) => value !== undefined);
   if (typeof titre === "string") data.titre = titre.trim();
   if (chapo !== undefined) data.chapo = chapo?.trim() || null;
   let finalContenuHtml: string | null = null;
@@ -159,21 +211,44 @@ export async function PATCH(
         { status: 403 }
       );
     }
-    data.etatId = etatId || null;
+    if (!etatId) {
+      data.etatId = null;
+    } else {
+      const requestedEtat = await prisma.etat.findUnique({
+        where: { id: etatId },
+        select: { slug: true },
+      });
+      const normalizedSlug = normalizeArticleStatusSlug(requestedEtat?.slug);
+      if (!normalizedSlug) {
+        return NextResponse.json(
+          { error: "Transition d’état non autorisée." },
+          { status: 400 }
+        );
+      }
+      const canonicalEtat = await ensureEtatBySlug(normalizedSlug);
+      data.etatId = canonicalEtat.id;
+    }
   } else if (typeof etatSlug === "string" && etatSlug.trim()) {
-    const targetSlug = etatSlug.trim();
+    const targetSlug = normalizeArticleStatusSlug(etatSlug.trim());
+    if (!targetSlug) {
+      return NextResponse.json(
+        { error: "Transition d’état non autorisée." },
+        { status: 400 }
+      );
+    }
     if (!isEditor && targetSlug !== "brouillon" && targetSlug !== "a_relire") {
       return NextResponse.json(
         { error: "Transition d’état non autorisée." },
         { status: 403 }
       );
     }
-    let targetEtat = await prisma.etat.findFirst({ where: { slug: targetSlug } });
-    if (!targetEtat && targetSlug === "brouillon") {
-      targetEtat = await prisma.etat.create({
-        data: { slug: "brouillon", libelle: "Brouillon", ordre: -1 },
-      });
+    if (!isEditor && targetSlug === "brouillon" && !isDraftStatus(existing.etat?.slug)) {
+      return NextResponse.json(
+        { error: "Un article soumis ne peut pas redevenir brouillon." },
+        { status: 403 }
+      );
     }
+    const targetEtat = await ensureEtatBySlug(targetSlug);
     data.etatId = targetEtat?.id ?? null;
   }
   if (auteurId !== undefined && typeof auteurId === "string" && auteurId.trim()) {
@@ -200,11 +275,20 @@ export async function PATCH(
   }
   if (lienGoogleDoc !== undefined) data.lienGoogleDoc = lienGoogleDoc?.trim() || null;
 
+  const authorResubmitted =
+    !isEditor && hasEditableFieldChange && !isDraftStatus(existing.etat?.slug);
+
+  if (authorResubmitted) {
+    const reviewEtat = await ensureEtatBySlug("a_relire");
+    data.etatId = reviewEtat.id;
+    data.dateDepot = new Date();
+  }
+
   const previousEtatId = existing.etatId;
   const newEtatId = (data.etatId as string | null) ?? previousEtatId;
   const etatChanged = newEtatId !== previousEtatId;
 
-  // Si l'état change vers \"valide\" et que datePublication est encore vide,
+  // Si l'état change vers "publie" et que datePublication est encore vide,
   // on fige la date de validation à maintenant.
   if (etatChanged && newEtatId) {
     const etatCible = await prisma.etat.findUnique({
@@ -212,14 +296,14 @@ export async function PATCH(
       select: { slug: true },
     });
     if (
-      etatCible?.slug === "valide" &&
+      normalizeArticleStatusSlug(etatCible?.slug) === "publie" &&
       !existing.datePublication &&
       data.datePublication === undefined
     ) {
       data.datePublication = new Date();
     }
     if (
-      etatCible?.slug !== "brouillon" &&
+      normalizeArticleStatusSlug(etatCible?.slug) !== "brouillon" &&
       !existing.dateDepot &&
       data.dateDepot === undefined
     ) {
@@ -243,7 +327,7 @@ export async function PATCH(
     },
   });
 
-  if (etatChanged && newEtatId) {
+  if ((etatChanged || authorResubmitted) && newEtatId) {
     const etatCible = await prisma.etat.findUnique({
       where: { id: newEtatId },
       select: { slug: true, libelle: true },
@@ -256,34 +340,6 @@ export async function PATCH(
         userId: user?.id ?? null,
       },
     });
-
-    if (etatCible?.slug === "corrige") {
-      try {
-        const auteur = await prisma.auteur.findUnique({
-          where: { id: article.auteurId },
-          select: { email: true },
-        });
-        const email = auteur?.email ?? null;
-        if (email) {
-          ingestDebug({
-            sessionId: "fb943b",
-            runId: "pre-fix",
-            hypothesisId: "H_CORRIGE_EMAIL",
-            location: "app/api/articles/[id]/route.ts:PATCH:beforeEmail",
-            message: "Would send corrected article email",
-            data: {
-              articleId: id,
-              email,
-              titre: article.titre,
-              etat: etatCible.libelle,
-            },
-          });
-          // Ici, on pourrait brancher un vrai service d’e‑mail (Resend, SMTP, etc.).
-        }
-      } catch {
-        // On ne bloque pas la requête si l’envoi d’e‑mail échoue.
-      }
-    }
   }
 
   ingestDebug({

@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { getEtatBadgeClasses } from "../articles/ArticlesCardsExplorer";
+import { getArticleStatusLabel } from "@/lib/article-status";
 
 type ArticleHistoriqueItem = {
   id: string;
   createdAt: string;
-  etat: { libelle: string } | null;
+  etat: { libelle: string; slug: string } | null;
   user: { email: string | null } | null;
   commentaire: string | null;
 };
@@ -152,7 +153,8 @@ export function ArticleHistoryDrawer({
                           true
                         )}
                       >
-                        {article.etat.libelle}
+                        {getArticleStatusLabel(article.etat.slug, "author") ??
+                          article.etat.libelle}
                       </span>
                     )}
                     {article.mutuelle && (
@@ -200,7 +202,12 @@ export function ArticleHistoryDrawer({
                         >
                           <div className="flex items-center justify-between gap-2">
                             <div className="font-medium">
-                              {event.etat?.libelle ?? "État mis à jour"}
+                              {event.etat
+                                ? getArticleStatusLabel(
+                                    event.etat.slug,
+                                    "author"
+                                  ) ?? event.etat.libelle
+                                : "État mis à jour"}
                             </div>
                             <div className="text-[11px] text-rer-muted">
                               {new Date(event.createdAt).toLocaleString("fr-FR")}

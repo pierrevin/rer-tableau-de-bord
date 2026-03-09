@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useParams, useSearchParams } from "next/navigation";
+import { getArticleStatusLabel } from "@/lib/article-status";
 import {
   getEtatBadgeClasses,
   getFormatBadgeClasses,
@@ -155,6 +156,12 @@ export default function ArticleDetailPage() {
       : "← Retour à la liste";
 
   const explorerBack = back ?? "articles";
+  const statusContext =
+    mine === "1" || back === "mes-articles"
+      ? "author"
+      : back === "admin"
+      ? "admin"
+      : "public";
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
@@ -215,7 +222,8 @@ export default function ArticleDetailPage() {
                 <span
                   className={getEtatBadgeClasses(article.etat.slug, false)}
                 >
-                  {article.etat.libelle}
+                  {getArticleStatusLabel(article.etat.slug, statusContext) ??
+                    article.etat.libelle}
                 </span>
               )}
               {article.auteur &&

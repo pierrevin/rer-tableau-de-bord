@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { canEditArticles, getSessionUser } from "@/lib/auth";
 import { ingestDebug } from "@/lib/ingest-debug";
+import { getStatusWhereClause, normalizeArticleStatusSlug } from "@/lib/article-status";
 import { sanitizeArticleHtml } from "@/lib/sanitizeArticleHtml";
 
 function extractFirstImageSrc(html: string | null): string | null {
@@ -30,6 +31,7 @@ export async function GET(request: NextRequest) {
   const fromParam = searchParams.get("from") ?? "";
   const toParam = searchParams.get("to") ?? "";
   const mineParam = searchParams.get("mine") ?? "";
+  const scopeParam = searchParams.get("scope") ?? "";
 
   const where: any = {};
 
@@ -41,8 +43,10 @@ export async function GET(request: NextRequest) {
     ];
   }
 
-  if (etatSlug) {
-    where.etat = { slug: etatSlug };
+  const effectiveEtatSlug = scopeParam === "public" ? "publie" : etatSlug;
+  const etatWhere = getStatusWhereClause(effectiveEtatSlug);
+  if (etatWhere) {
+    where.etat = etatWhere;
   }
 
   // Filtre "Mes articles" : articles dont l'utilisateur connecté est l'auteur.
@@ -192,9 +196,17 @@ export async function POST(request: NextRequest) {
 
     const requestedSlug =
       typeof etatSlug === "string" ? etatSlug.trim() : "";
-    const targetSlug =
-      requestedSlug || (isDraft === true ? "brouillon" : "a_relire");
+    const targetSlug = normalizeArticleStatusSlug(
+      requestedSlug || (isDraft === true ? "brouillon" : "a_relire")
+    );
     const draftMode = targetSlug === "brouillon";
+
+    if (!targetSlug) {
+      return NextResponse.json(
+        { error: "État d’article invalide." },
+        { status: 400 }
+      );
+    }
 
     // En brouillon, on autorise un titre / contenu vides.
     // En mode normal, on garde les validations strictes.
@@ -258,6 +270,14 @@ export async function POST(request: NextRequest) {
     if (!targetEtat && targetSlug === "brouillon") {
       targetEtat = await prisma.etat.create({
         data: { slug: "brouillon", libelle: "Brouillon", ordre: -1 },
+      });
+    } else if (!targetEtat && targetSlug === "publie") {
+      targetEtat = await prisma.etat.create({
+        data: { slug: "publie", libelle: "Publié", ordre: 2 },
+      });
+    } else if (!targetEtat && targetSlug === "a_relire") {
+      targetEtat = await prisma.etat.create({
+        data: { slug: "a_relire", libelle: "À relire", ordre: 1 },
       });
     }
 

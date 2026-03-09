@@ -4,6 +4,10 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  getArticleStatusLabel,
+  normalizeArticleStatusSlug,
+} from "@/lib/article-status";
 import { useArticleShortcuts } from "./useArticleShortcuts";
 
 type ArticleSummary = {
@@ -130,25 +134,14 @@ type ArticlesExplorerViewProps = {
 export function getEtatBadgeClasses(slug?: string, active?: boolean): string {
   const base =
     "inline-flex items-center rounded-lg border px-2 py-0.5 text-[11px] font-medium";
+  const normalizedSlug = normalizeArticleStatusSlug(slug);
 
-  switch (slug) {
+  switch (normalizedSlug) {
     case "a_relire":
       return (
         base +
         " border-[#FACC15]/60 bg-[#FEF9C3] text-[#854D0E]" +
         (active ? " ring-1 ring-[#FACC15]/80" : "")
-      );
-    case "corrige":
-      return (
-        base +
-        " border-[#BFDBFE] bg-[#EFF6FF] text-[#1D4ED8]" +
-        (active ? " ring-1 ring-[#93C5FD]" : "")
-      );
-    case "valide":
-      return (
-        base +
-        " border-transparent bg-[#D1FAE5] text-[#047857]" +
-        (active ? " ring-1 ring-[#6EE7B7]" : "")
       );
     case "publie":
       return (
@@ -334,6 +327,7 @@ function ArticleDetailContent({
     () => (detail?.contenu ? transformEmbeds(detail.contenu) : ""),
     [detail?.contenu]
   );
+  const statusContext = mine === "1" ? "author" : "public";
 
   const handleCopyHtml = async () => {
     if (!detail || loading || error) return;
@@ -462,7 +456,10 @@ function ArticleDetailContent({
           {showEtat && detail.etat && (
             <p className="text-xs text-rer-muted">
               État :{" "}
-              <span className="font-medium">{detail.etat.libelle}</span>
+              <span className="font-medium">
+                {getArticleStatusLabel(detail.etat.slug, statusContext) ??
+                  detail.etat.libelle}
+              </span>
             </p>
           )}
           <p className="text-xs text-rer-muted">
@@ -618,6 +615,7 @@ export function ArticlesExplorerView({
     const params = new URLSearchParams();
     params.set("page", String(page));
     params.set("limit", String(pageSize));
+    if (mine !== "1") params.set("scope", "public");
     if (q) params.set("q", q);
     if (etatSlug) params.set("etat", etatSlug);
     if (mutuelleId) params.set("mutuelleId", mutuelleId);
@@ -842,7 +840,10 @@ export function ArticlesExplorerView({
                             isSelected
                           )}
                         >
-                          {article.etat.libelle}
+                          {getArticleStatusLabel(
+                            article.etat.slug,
+                            mine === "1" ? "author" : "public"
+                          ) ?? article.etat.libelle}
                         </span>
                       )}
                     </div>
