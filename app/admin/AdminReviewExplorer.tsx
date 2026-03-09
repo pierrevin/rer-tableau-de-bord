@@ -1033,13 +1033,6 @@ export function AdminReviewExplorer({
             {etat.libelle}
           </button>
         ))}
-        <button
-          type="button"
-          onClick={() => handleEtatFilterClick("a_relire")}
-          className="chip-filter"
-        >
-          À relire
-        </button>
       </div>
 
       <div
