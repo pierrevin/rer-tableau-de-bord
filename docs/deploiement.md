@@ -18,6 +18,11 @@ Ce document décrit comment déployer l’application en production. Les correct
   - `SMTP_URL` : URL de connexion SMTP complète (optionnelle si `SMTP_HOST`/`SMTP_PORT` fournis).
   - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_SECURE` : configuration SMTP détaillée (si provider `smtp`).
   - `PASSWORD_RESET_WEBHOOK_URL` : variable legacy encore supportée (fallback si `MAIL_WEBHOOK_URL` absent).
+  - `NEXT_PUBLIC_SUPABASE_URL` : URL du projet Supabase.
+  - `NEXT_PUBLIC_SUPABASE_ANON_KEY` : clé publique Supabase pour le client.
+  - `SUPABASE_SERVICE_ROLE_KEY` : clé serveur Supabase nécessaire pour générer les URLs d’upload signées.
+  - `SUPABASE_URL` : facultatif si `NEXT_PUBLIC_SUPABASE_URL` est déjà défini, mais recommandé pour homogénéiser la config serveur.
+  - `SUPABASE_STORAGE_BUCKET` ou `NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET` : nom du bucket de stockage (par défaut `articles`).
 
 Génération d’un `NEXTAUTH_SECRET` :
 ```bash
@@ -81,6 +86,10 @@ MAIL_WEBHOOK_URL=https://votre-service-mail.local/api/send
    - `DATABASE_URL` (Production, Preview, Development).
    - `NEXTAUTH_SECRET` (Production, Preview).
    - `NEXTAUTH_URL` = `https://votre-projet.vercel.app` (ajuster après le premier déploiement).
+  - `NEXT_PUBLIC_SUPABASE_URL`
+  - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+  - `SUPABASE_SERVICE_ROLE_KEY`
+  - `SUPABASE_STORAGE_BUCKET` (si différent de `articles`)
 5. **Migrations** : Vercel ne lance pas les migrations automatiquement. Soit :
    - exécuter en local avant chaque déploiement : `npm run db:migrate` (avec `DATABASE_URL` de prod),  
    - soit ajouter un script de déploiement ou un job qui appelle `prisma migrate deploy` (ex. GitHub Action).
@@ -120,6 +129,8 @@ Donc en pratique : BDD Supabase + hébergement Next.js sur Vercel/Railway/Render
 - [ ] `DATABASE_URL` pointe vers la BDD de prod (Supabase ou autre).
 - [ ] `NEXTAUTH_URL` = URL réelle de l’app (sans slash final).
 - [ ] `NEXTAUTH_SECRET` défini et gardé secret.
+- [ ] `NEXT_PUBLIC_SUPABASE_URL` et `NEXT_PUBLIC_SUPABASE_ANON_KEY` définis.
+- [ ] `SUPABASE_SERVICE_ROLE_KEY` défini pour permettre l’upload d’images.
 - [ ] Migrations appliquées : `npx prisma migrate deploy`.
 - [ ] Seed si besoin (référentiels, premier admin) : `npm run db:seed`.
 - [ ] Uploads : prévoir un stockage persistant (Supabase Storage ou S3) et adapter l’API d’upload si nécessaire.
