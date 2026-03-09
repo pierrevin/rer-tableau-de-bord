@@ -1,63 +1,58 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
 
 type Mutuelle = { id: string; nom: string };
 type Rubrique = { id: string; libelle: string };
 type Format = { id: string; libelle: string; signesReference: number | null };
-type Auteur = {
-  id: string;
-  prenom: string;
-  nom: string;
-  email: string | null;
-  mutuelleId: string | null;
-};
-
-type AuteursResponse = {
-  auteurs: Auteur[];
-  mutuelles: Mutuelle[];
+type SiteLogoPayload = {
+  logoUrl: string;
+  hasCustomLogo: boolean;
+  updatedAt: number | null;
 };
 
 export default function AdminReferentielsPage() {
   const [mutuelles, setMutuelles] = useState<Mutuelle[]>([]);
   const [rubriques, setRubriques] = useState<Rubrique[]>([]);
   const [formats, setFormats] = useState<Format[]>([]);
-  const [auteurs, setAuteurs] = useState<Auteur[]>([]);
-  const [mutuellesForAuteurs, setMutuellesForAuteurs] = useState<Mutuelle[]>([]);
+  const [logo, setLogo] = useState<SiteLogoPayload>({
+    logoUrl: "/uploads/Logo_rer_noir-hd.jpg",
+    hasCustomLogo: false,
+    updatedAt: null,
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [savingKey, setSavingKey] = useState<string | null>(null);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoMessage, setLogoMessage] = useState<string | null>(null);
+  const [logoInputKey, setLogoInputKey] = useState(0);
 
   const [newMutuelleNom, setNewMutuelleNom] = useState("");
   const [newRubriqueLibelle, setNewRubriqueLibelle] = useState("");
   const [newFormatLibelle, setNewFormatLibelle] = useState("");
   const [newFormatSignes, setNewFormatSignes] = useState("");
-  const [newAuteurPrenom, setNewAuteurPrenom] = useState("");
-  const [newAuteurNom, setNewAuteurNom] = useState("");
-  const [newAuteurEmail, setNewAuteurEmail] = useState("");
-  const [newAuteurMutuelleId, setNewAuteurMutuelleId] = useState<string | "">("");
 
   useEffect(() => {
     const run = async () => {
       try {
-        const [mRes, rRes, fRes, aRes] = await Promise.all([
+        const [mRes, rRes, fRes, logoRes] = await Promise.all([
           fetch("/api/admin/mutuelles"),
           fetch("/api/admin/rubriques"),
           fetch("/api/admin/formats"),
-          fetch("/api/admin/auteurs"),
+          fetch("/api/admin/logo", { cache: "no-store" }),
         ]);
-        if (!mRes.ok || !rRes.ok || !fRes.ok || !aRes.ok) {
+        if (!mRes.ok || !rRes.ok || !fRes.ok || !logoRes.ok) {
           throw new Error("Erreur de chargement");
         }
         const m = (await mRes.json()) as Mutuelle[];
         const r = (await rRes.json()) as Rubrique[];
         const f = (await fRes.json()) as Format[];
-        const a = (await aRes.json()) as AuteursResponse;
+        const logoPayload = (await logoRes.json()) as SiteLogoPayload;
         setMutuelles(m);
         setRubriques(r);
         setFormats(f);
-        setAuteurs(a.auteurs);
-        setMutuellesForAuteurs(a.mutuelles);
+        setLogo(logoPayload);
       } catch (e) {
         console.error(e);
         setError("Impossible de charger les référentiels.");
@@ -86,16 +81,15 @@ export default function AdminReferentielsPage() {
     const f = (await res.json()) as Format[];
     setFormats(f);
   };
-  const refreshAuteurs = async () => {
-    const res = await fetch("/api/admin/auteurs");
+  const refreshLogo = async () => {
+    const res = await fetch("/api/admin/logo", { cache: "no-store" });
     if (!res.ok) return;
-    const a = (await res.json()) as AuteursResponse;
-    setAuteurs(a.auteurs);
-    setMutuellesForAuteurs(a.mutuelles);
+    const payload = (await res.json()) as SiteLogoPayload;
+    setLogo(payload);
   };
 
-  const handleError = (e: any, fallback: string) => {
-    const msg = e?.message || fallback;
+  const handleError = (e: unknown, fallback: string) => {
+    const msg = e instanceof Error ? e.message : fallback;
     setError(msg);
   };
 
@@ -114,7 +108,7 @@ export default function AdminReferentielsPage() {
         throw new Error(json.error || "Erreur création mutuelle");
       }
       setNewMutuelleNom("");
-      await Promise.all([refreshMutuelles(), refreshAuteurs()]);
+      await refreshMutuelles();
     } catch (e) {
       handleError(e, "Erreur création mutuelle");
     } finally {
@@ -136,7 +130,7 @@ export default function AdminReferentielsPage() {
         const json = await res.json().catch(() => ({}));
         throw new Error(json.error || "Erreur mise à jour mutuelle");
       }
-      await Promise.all([refreshMutuelles(), refreshAuteurs()]);
+      await refreshMutuelles();
     } catch (e) {
       handleError(e, "Erreur mise à jour mutuelle");
     } finally {
@@ -156,7 +150,7 @@ export default function AdminReferentielsPage() {
         const json = await res.json().catch(() => ({}));
         throw new Error(json.error || "Erreur suppression mutuelle");
       }
-      await Promise.all([refreshMutuelles(), refreshAuteurs()]);
+      await refreshMutuelles();
     } catch (e) {
       handleError(e, "Erreur suppression mutuelle");
     } finally {
@@ -304,79 +298,42 @@ export default function AdminReferentielsPage() {
     }
   };
 
-  const createAuteur = async () => {
-    if (!newAuteurPrenom.trim() || !newAuteurNom.trim() || !newAuteurMutuelleId) {
-      setError("Prénom, nom et mutuelle sont obligatoires pour créer un auteur.");
+  const uploadLogo = async () => {
+    if (!logoFile) {
+      setError("Sélectionnez un fichier image avant l’upload.");
       return;
     }
-    setSavingKey("auteur-new");
+
+    setSavingKey("logo-upload");
     setError(null);
+    setLogoMessage(null);
+
     try {
-      const res = await fetch("/api/admin/auteurs", {
+      const formData = new FormData();
+      formData.append("file", logoFile);
+
+      const res = await fetch("/api/admin/logo", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          prenom: newAuteurPrenom.trim(),
-          nom: newAuteurNom.trim(),
-          email: newAuteurEmail.trim() || null,
-          mutuelleId: newAuteurMutuelleId,
-        }),
+        body: formData,
       });
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || "Erreur création auteur");
+        throw new Error(json.error || "Erreur lors de l’upload du logo");
       }
-      setNewAuteurPrenom("");
-      setNewAuteurNom("");
-      setNewAuteurEmail("");
-      setNewAuteurMutuelleId("");
-      await refreshAuteurs();
-    } catch (e) {
-      handleError(e, "Erreur création auteur");
-    } finally {
-      setSavingKey(null);
-    }
-  };
 
-  const updateAuteur = async (
-    a: Auteur,
-    patch: Partial<{ prenom: string; nom: string; email: string | null; mutuelleId: string | null }>
-  ) => {
-    setSavingKey(`auteur-${a.id}`);
-    setError(null);
-    try {
-      const res = await fetch(`/api/admin/auteurs/${a.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(patch),
-      });
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || "Erreur mise à jour auteur");
-      }
-      await refreshAuteurs();
+      const payload = (await res.json()) as SiteLogoPayload;
+      setLogo(payload);
+      window.dispatchEvent(
+        new CustomEvent("site-logo-updated", {
+          detail: { logoUrl: payload.logoUrl },
+        })
+      );
+      setLogoFile(null);
+      setLogoInputKey((value) => value + 1);
+      setLogoMessage("Logo mis à jour. Le header utilisera automatiquement ce nouveau fichier.");
+      await refreshLogo();
     } catch (e) {
-      handleError(e, "Erreur mise à jour auteur");
-    } finally {
-      setSavingKey(null);
-    }
-  };
-
-  const deleteAuteur = async (a: Auteur) => {
-    if (!window.confirm(`Supprimer l’auteur ${a.prenom} ${a.nom} ?`)) return;
-    setSavingKey(`auteur-${a.id}`);
-    setError(null);
-    try {
-      const res = await fetch(`/api/admin/auteurs/${a.id}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || "Erreur suppression auteur");
-      }
-      await refreshAuteurs();
-    } catch (e) {
-      handleError(e, "Erreur suppression auteur");
+      handleError(e, "Erreur lors de l’upload du logo");
     } finally {
       setSavingKey(null);
     }
@@ -400,8 +357,8 @@ export default function AdminReferentielsPage() {
           Référentiels éditoriaux
         </h1>
         <p className="text-sm text-rer-muted">
-          Gérer les mutuelles, rubriques, formats et auteurs utilisés dans les
-          articles et les filtres.
+          Gérer les mutuelles, rubriques, formats et le logo affiché dans le
+          header de l’application.
         </p>
       </header>
 
@@ -412,6 +369,62 @@ export default function AdminReferentielsPage() {
       )}
 
       <div className="grid gap-4 lg:grid-cols-2">
+        <div className="space-y-3 rounded-lg bg-rer-app p-3 lg:col-span-2">
+          <div>
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-rer-muted">
+              Logo du header
+            </h2>
+            <p className="mt-1 text-sm text-rer-muted">
+              Tout logo uploadé ici remplace automatiquement celui affiché en
+              haut de l’application.
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-4 rounded-lg border border-rer-border bg-white p-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-center gap-4">
+              <div className="relative h-20 w-20 overflow-hidden rounded-full border border-rer-border bg-white">
+                <Image
+                  src={logo.logoUrl}
+                  alt="Logo actuel"
+                  fill
+                  sizes="80px"
+                  className="object-contain p-3"
+                />
+              </div>
+              <div className="space-y-1 text-sm">
+                <p className="font-medium text-rer-text">
+                  {logo.hasCustomLogo ? "Logo personnalisé actif" : "Logo historique actif"}
+                </p>
+                <p className="text-rer-muted break-all">{logo.logoUrl}</p>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2 md:min-w-[320px]">
+              <input
+                key={logoInputKey}
+                type="file"
+                accept="image/*"
+                onChange={(e) => setLogoFile(e.target.files?.[0] ?? null)}
+                className="block w-full text-sm text-rer-text file:mr-3 file:rounded-full file:border-0 file:bg-rer-blue file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white hover:file:bg-[#1e3380]"
+              />
+              <div className="flex items-center justify-between gap-3">
+                <p className="truncate text-xs text-rer-muted">
+                  {logoFile ? logoFile.name : "PNG, JPG, WEBP…"}
+                </p>
+                <button
+                  type="button"
+                  onClick={uploadLogo}
+                  disabled={savingKey === "logo-upload"}
+                  className="inline-flex items-center rounded-full bg-rer-blue px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#1e3380] disabled:opacity-60"
+                >
+                  {savingKey === "logo-upload" ? "Upload…" : "Mettre à jour"}
+                </button>
+              </div>
+              {logoMessage && <p className="text-xs text-green-700">{logoMessage}</p>}
+            </div>
+          </div>
+        </div>
+
         {/* Mutuelles */}
         <div className="space-y-2 rounded-lg bg-rer-app p-3">
           <h2 className="text-xs font-semibold uppercase tracking-wide text-rer-muted">
@@ -588,123 +601,6 @@ export default function AdminReferentielsPage() {
             {formats.length === 0 && (
               <p className="px-1 py-0.5 text-xs text-rer-muted">
                 Aucun format pour le moment.
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* Auteurs */}
-        <div className="space-y-2 rounded-lg bg-rer-app p-3">
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-rer-muted">
-            Auteurs
-          </h2>
-          <div className="flex flex-wrap items-center gap-2 text-sm">
-            <input
-              type="text"
-              placeholder="Prénom"
-              value={newAuteurPrenom}
-              onChange={(e) => setNewAuteurPrenom(e.target.value)}
-              className="h-8 w-28 rounded border border-rer-border bg-white px-2 text-sm"
-            />
-            <input
-              type="text"
-              placeholder="Nom"
-              value={newAuteurNom}
-              onChange={(e) => setNewAuteurNom(e.target.value)}
-              className="h-8 w-32 rounded border border-rer-border bg-white px-2 text-sm"
-            />
-            <input
-              type="email"
-              placeholder="Email (optionnel)"
-              value={newAuteurEmail}
-              onChange={(e) => setNewAuteurEmail(e.target.value)}
-              className="h-8 flex-1 min-w-[160px] rounded border border-rer-border bg-white px-2 text-sm"
-            />
-            <select
-              value={newAuteurMutuelleId}
-              onChange={(e) => setNewAuteurMutuelleId(e.target.value)}
-              className="h-8 rounded border border-rer-border bg-white px-2 text-xs"
-            >
-              <option value="">Mutuelle (optionnelle)…</option>
-              {mutuellesForAuteurs.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.nom}
-                </option>
-              ))}
-            </select>
-            <button
-              type="button"
-              onClick={createAuteur}
-              disabled={savingKey === "auteur-new"}
-              className="inline-flex items-center rounded-full bg-rer-blue px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#1e3380] disabled:opacity-60"
-            >
-              Ajouter
-            </button>
-          </div>
-          <div className="max-h-72 space-y-1 overflow-y-auto rounded border border-rer-border bg-white p-1 text-sm">
-            {auteurs.map((a) => (
-              <div
-                key={a.id}
-                className="flex flex-wrap items-center gap-2 rounded px-1 py-0.5 hover:bg-rer-app/60"
-              >
-                <input
-                  type="text"
-                  defaultValue={a.prenom}
-                  onBlur={(e) =>
-                    e.target.value !== a.prenom &&
-                    updateAuteur(a, { prenom: e.target.value })
-                  }
-                  className="h-7 w-24 rounded border border-transparent px-1 py-0.5 text-sm hover:border-rer-border focus:border-rer-blue focus:outline-none"
-                />
-                <input
-                  type="text"
-                  defaultValue={a.nom}
-                  onBlur={(e) =>
-                    e.target.value !== a.nom &&
-                    updateAuteur(a, { nom: e.target.value })
-                  }
-                  className="h-7 w-28 rounded border border-transparent px-1 py-0.5 text-sm hover:border-rer-border focus:border-rer-blue focus:outline-none"
-                />
-                <input
-                  type="email"
-                  defaultValue={a.email ?? ""}
-                  onBlur={(e) =>
-                    e.target.value !== (a.email ?? "") &&
-                    updateAuteur(a, {
-                      email: e.target.value.trim() || null,
-                    })
-                  }
-                  className="h-7 flex-1 min-w-[120px] rounded border border-rer-border bg-white px-1 py-0.5 text-xs"
-                />
-                <select
-                  defaultValue={a.mutuelleId || ""}
-                  onChange={(e) =>
-                    updateAuteur(a, {
-                      mutuelleId: e.target.value || null,
-                    })
-                  }
-                  className="h-7 rounded border border-rer-border bg-white px-1 text-xs"
-                >
-                  <option value="">—</option>
-                  {mutuellesForAuteurs.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.nom}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  onClick={() => deleteAuteur(a)}
-                  disabled={savingKey === `auteur-${a.id}`}
-                  className="text-[11px] font-medium text-red-600 hover:text-red-700 disabled:opacity-60"
-                >
-                  Suppr.
-                </button>
-              </div>
-            ))}
-            {auteurs.length === 0 && (
-              <p className="px-1 py-0.5 text-xs text-rer-muted">
-                Aucun auteur pour le moment.
               </p>
             )}
           </div>

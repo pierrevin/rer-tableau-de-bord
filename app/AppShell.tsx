@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -15,6 +16,40 @@ type AppShellProps = {
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
   const isLogin = pathname === "/login";
+  const [logoUrl, setLogoUrl] = useState("/uploads/Logo_rer_noir-hd.jpg");
+
+  useEffect(() => {
+    let active = true;
+
+    const loadLogo = async () => {
+      try {
+        const response = await fetch("/api/admin/logo", { cache: "no-store" });
+        if (!response.ok) return;
+
+        const payload = (await response.json()) as { logoUrl?: string };
+        if (active && payload.logoUrl) {
+          setLogoUrl(payload.logoUrl);
+        }
+      } catch {
+        // On conserve le logo par défaut si la récupération échoue.
+      }
+    };
+
+    const handleLogoUpdated = (event: Event) => {
+      const customEvent = event as CustomEvent<{ logoUrl?: string }>;
+      if (active && customEvent.detail?.logoUrl) {
+        setLogoUrl(customEvent.detail.logoUrl);
+      }
+    };
+
+    loadLogo();
+    window.addEventListener("site-logo-updated", handleLogoUpdated as EventListener);
+
+    return () => {
+      active = false;
+      window.removeEventListener("site-logo-updated", handleLogoUpdated as EventListener);
+    };
+  }, []);
 
   if (isLogin) {
     return <main className="flex-1">{children}</main>;
@@ -28,7 +63,7 @@ export function AppShell({ children }: AppShellProps) {
             <Link href="/" className="flex items-center gap-3">
               <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full border border-rer-border bg-white">
                 <Image
-                  src="/uploads/Logo_rer_noir-hd.jpg"
+                  src={logoUrl}
                   alt="Logo RER"
                   fill
                   sizes="48px"
