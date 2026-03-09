@@ -86,8 +86,15 @@ export async function POST(request: NextRequest) {
     );
   } catch (e) {
     console.error("Erreur création URL upload Supabase", e);
+    const details =
+      e instanceof Error && e.message
+        ? e.message
+        : "Erreur inconnue côté serveur.";
     return NextResponse.json(
-      { error: "Impossible de générer l’URL d’upload." },
+      {
+        error: "Impossible de générer l’URL d’upload.",
+        details,
+      },
       { status: 500 }
     );
   }
