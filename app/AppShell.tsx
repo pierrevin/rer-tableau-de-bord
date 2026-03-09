@@ -1,9 +1,9 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
 import { AppMainNav } from "./AppMainNav";
 import { AppUserStatus } from "./AppUserStatus";
 import { AppHeaderSecondary } from "./AppHeaderSecondary";
@@ -15,8 +15,44 @@ type AppShellProps = {
 
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
-  const [logoUnavailable, setLogoUnavailable] = useState(false);
   const isLogin = pathname === "/login";
+  const [logoUrl, setLogoUrl] = useState("/default-logo.svg");
+  const [logoUnavailable, setLogoUnavailable] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadLogo = async () => {
+      try {
+        const response = await fetch("/api/admin/logo", { cache: "no-store" });
+        if (!response.ok) return;
+
+        const payload = (await response.json()) as { logoUrl?: string };
+        if (active && payload.logoUrl) {
+          setLogoUrl(payload.logoUrl);
+          setLogoUnavailable(false);
+        }
+      } catch {
+        // On conserve le logo par défaut si la récupération échoue.
+      }
+    };
+
+    const handleLogoUpdated = (event: Event) => {
+      const customEvent = event as CustomEvent<{ logoUrl?: string }>;
+      if (active && customEvent.detail?.logoUrl) {
+        setLogoUrl(customEvent.detail.logoUrl);
+        setLogoUnavailable(false);
+      }
+    };
+
+    loadLogo();
+    window.addEventListener("site-logo-updated", handleLogoUpdated as EventListener);
+
+    return () => {
+      active = false;
+      window.removeEventListener("site-logo-updated", handleLogoUpdated as EventListener);
+    };
+  }, []);
 
   if (isLogin) {
     return <main className="flex-1">{children}</main>;
@@ -31,11 +67,12 @@ export function AppShell({ children }: AppShellProps) {
               <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full border border-rer-border bg-white">
                 {!logoUnavailable ? (
                   <Image
-                    src="/uploads/Logo_rer_noir-hd.jpg"
+                    src={logoUrl}
                     alt="Logo RER"
                     fill
                     sizes="48px"
                     className="object-contain p-2"
+                    unoptimized
                     priority
                     onError={() => setLogoUnavailable(true)}
                   />

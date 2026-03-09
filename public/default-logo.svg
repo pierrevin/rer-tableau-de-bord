@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+  <title id="title">Logo RER par défaut</title>
+  <desc id="desc">Logo de secours utilisé tant quaucun logo personnalisé na été importé.</desc>
+  <circle cx="64" cy="64" r="60" fill="#ffffff" stroke="#d9dde6" stroke-width="4"/>
+  <path d="M34 84V44h20c13 0 20 6 20 17 0 8-4 13-10 15l12 8H61L50 77h-6v7H34zm10-15h9c7 0 11-3 11-8s-4-8-11-8h-9v16z" fill="#243b8f"/>
+  <path d="M80 84V44h14l16 24V44h10v40h-12L90 58v26H80z" fill="#111827"/>
+</svg>
