@@ -90,6 +90,130 @@ type AdminReviewExplorerProps = {
   etats: Etat[];
 };
 
+type AdminActionMenuItem = {
+  id: string;
+  label: string;
+  tone?: "default" | "danger";
+  active?: boolean;
+  onSelect: () => void | Promise<void>;
+};
+
+function getActionTriggerClasses(slug: string | null, open: boolean): string {
+  const base =
+    "inline-flex h-9 min-h-9 items-center gap-2 rounded-xl border px-3 py-2 text-[11px] font-medium shadow-sm transition";
+
+  switch (normalizeArticleStatusSlug(slug)) {
+    case "a_relire":
+      return `${base} border-[#FACC15]/60 bg-[#FEF9C3] text-[#854D0E] ${
+        open ? "ring-1 ring-[#FACC15]/70" : "hover:bg-[#FEF3A6]"
+      }`;
+    case "publie":
+      return `${base} border-[#22C55E] bg-[#16A34A] text-white ${
+        open ? "ring-1 ring-[#4ADE80]" : "hover:bg-[#15803D]"
+      }`;
+    default:
+      return `${base} border-rer-border bg-white text-rer-text ${
+        open ? "ring-1 ring-rer-blue" : "hover:bg-rer-app"
+      }`;
+  }
+}
+
+function AdminActionMenu({
+  label,
+  currentSlug = null,
+  items,
+  disabled = false,
+  loading = false,
+  align = "left",
+}: {
+  label: string;
+  currentSlug?: string | null;
+  items: AdminActionMenuItem[];
+  disabled?: boolean;
+  loading?: boolean;
+  align?: "left" | "right";
+}) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!containerRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+
+    window.addEventListener("mousedown", handlePointerDown);
+    return () => {
+      window.removeEventListener("mousedown", handlePointerDown);
+    };
+  }, [open]);
+
+  return (
+    <div ref={containerRef} className="relative">
+      <button
+        type="button"
+        disabled={disabled || loading}
+        onClick={() => setOpen((value) => !value)}
+        className={`${getActionTriggerClasses(
+          currentSlug,
+          open
+        )} ${(disabled || loading) ? "cursor-not-allowed opacity-60" : ""}`}
+        aria-expanded={open}
+      >
+        <span>{loading ? "Action..." : label}</span>
+        <svg
+          viewBox="0 0 20 20"
+          aria-hidden="true"
+          className={`h-4 w-4 shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+        >
+          <path d="M5 7.5 10 12.5 15 7.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+
+      {open && (
+        <div
+          className={`absolute z-20 mt-2 min-w-[220px] rounded-2xl border border-rer-border bg-white p-2 shadow-xl ${
+            align === "right" ? "right-0" : "left-0"
+          }`}
+        >
+          <div className="space-y-1">
+            {items.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={async () => {
+                  setOpen(false);
+                  await item.onSelect();
+                }}
+                className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition ${
+                  item.tone === "danger"
+                    ? "text-red-600 hover:bg-red-50"
+                    : item.active
+                    ? "bg-rer-blue/8 text-rer-blue"
+                    : "text-rer-text hover:bg-rer-app"
+                }`}
+              >
+                <span>{item.label}</span>
+                {item.active ? (
+                  <span className="text-[10px] font-medium uppercase tracking-wide">
+                    Actuel
+                  </span>
+                ) : null}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AdminArticlePanel({
   selectedId,
   selectedArticle,
@@ -129,6 +253,7 @@ function AdminArticlePanel({
   const [ref, setRef] = useState<AdminReferentiels | null>(null);
   const originalSnapshotRef = useRef<ArticleDetail | null>(null);
   const [showDiff, setShowDiff] = useState(false);
+  const [runningPrimaryAction, setRunningPrimaryAction] = useState(false);
 
   useEffect(() => {
     if (detail) {
@@ -368,21 +493,40 @@ function AdminArticlePanel({
   };
 
   const currentEtatSlug = currentSlug ?? "";
-
-  const getEtatSelectStyle = (slug: string | null): React.CSSProperties => {
-    switch (normalizeArticleStatusSlug(slug)) {
-      case "a_relire":
-        return { borderColor: "rgba(250,204,21,0.6)", backgroundColor: "#FEF9C3", color: "#854D0E" };
-      case "publie":
-        return { borderColor: "#22C55E", backgroundColor: "#16A34A", color: "#fff" };
-      default:
-        return {};
-    }
-  };
+  const actionMenuItems: AdminActionMenuItem[] = detail
+    ? [
+        ...sortedEtats.map((etat) => ({
+          id: `etat-${etat.slug}`,
+          label: etat.libelle,
+          active: etat.slug === currentEtatSlug,
+          onSelect: async () => {
+            setRunningPrimaryAction(true);
+            try {
+              await handleChangeEtat(etat.slug);
+            } finally {
+              setRunningPrimaryAction(false);
+            }
+          },
+        })),
+        {
+          id: "delete",
+          label: "Supprimer",
+          tone: "danger" as const,
+          onSelect: async () => {
+            setRunningPrimaryAction(true);
+            try {
+              await handleDelete();
+            } finally {
+              setRunningPrimaryAction(false);
+            }
+          },
+        },
+      ]
+    : [];
 
   return (
     <div className="flex h-full flex-col">
-      {/* Barre unique : Liste + État + Supprimer + Afficher modifs + Enregistré */}
+      {/* Barre unique : Liste + Actions + Afficher modifs + Enregistré */}
       <div className="admin-action-bar mb-3 flex flex-wrap items-center gap-2 border-b border-rer-border pb-3">
         {showListToggle && (
           <button
@@ -395,33 +539,16 @@ function AdminArticlePanel({
           </button>
         )}
         {detail && (
-          <label className="inline-flex h-9 min-h-9 items-center gap-2 text-[11px] text-rer-muted">
-            <span>État :</span>
-            <select
-              value={currentEtatSlug}
-              disabled={updatingEtat}
-              onChange={(e) => {
-                const slug = e.target.value;
-                if (slug) handleChangeEtat(slug);
-              }}
-              className="select-action min-w-[140px]"
-              style={getEtatSelectStyle(currentSlug)}
-            >
-              {sortedEtats.map((etat) => (
-                <option key={etat.slug} value={etat.slug}>
-                  {etat.libelle}
-                </option>
-              ))}
-            </select>
-          </label>
+          <div className="flex items-center gap-2 text-[11px] text-rer-muted">
+            <span>Action :</span>
+            <AdminActionMenu
+              label={getArticleStatusLabel(currentSlug, "admin") ?? "Actions"}
+              currentSlug={currentSlug}
+              items={actionMenuItems}
+              loading={updatingEtat || runningPrimaryAction}
+            />
+          </div>
         )}
-        <button
-          type="button"
-          onClick={handleDelete}
-          className="inline-flex h-9 min-h-9 items-center rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[11px] font-medium text-red-600 hover:bg-red-100"
-        >
-          Supprimer
-        </button>
         {detail && (
           <button
             type="button"
@@ -692,6 +819,7 @@ export function AdminReviewExplorer({
   const [listCollapsed, setListCollapsed] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const visibleArticlesRef = useRef<ArticleSummary[]>(visibleArticles);
+  const [runningBulkAction, setRunningBulkAction] = useState(false);
 
   // Met à jour la liste quand les props changent
   useEffect(() => {
@@ -976,14 +1104,42 @@ export function AdminReviewExplorer({
     }
   }
 
+  async function handleBulkEtatChange(targetEtatSlug: string) {
+    if (!selectedBulkIds.length) return;
+    setRunningBulkAction(true);
+    try {
+      const responses = await Promise.all(
+        selectedBulkIds.map((id) =>
+          fetch(`/api/articles/${id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ etatSlug: targetEtatSlug }),
+          })
+        )
+      );
+      if (responses.some((response) => !response.ok)) {
+        alert("Impossible de mettre à jour tous les articles sélectionnés.");
+        return;
+      }
+      setSelectedBulkIds([]);
+      router.refresh();
+    } catch {
+      alert("Erreur réseau lors de la mise à jour en masse.");
+    } finally {
+      setRunningBulkAction(false);
+    }
+  }
+
   async function handleBulkDelete() {
     if (!selectedBulkIds.length) {
       return;
     }
+    setRunningBulkAction(true);
     const confirmed = window.confirm(
       `Supprimer définitivement ${selectedBulkIds.length} article(s) sélectionné(s) ?`
     );
     if (!confirmed) {
+      setRunningBulkAction(false);
       return;
     }
     try {
@@ -1006,8 +1162,26 @@ export function AdminReviewExplorer({
       router.refresh();
     } catch {
       alert("Erreur réseau lors de la suppression en masse.");
+    } finally {
+      setRunningBulkAction(false);
     }
   }
+
+  const bulkActionItems: AdminActionMenuItem[] = sortedEtats.map((etat) => ({
+    id: `bulk-${etat.slug}`,
+    label: `Passer en ${etat.libelle.toLowerCase()}`,
+    onSelect: async () => {
+      await handleBulkEtatChange(etat.slug);
+    },
+  }));
+  bulkActionItems.push({
+    id: "bulk-delete",
+    label: "Supprimer la sélection",
+    tone: "danger",
+    onSelect: async () => {
+      await handleBulkDelete();
+    },
+  });
 
   return (
     <>
@@ -1067,11 +1241,32 @@ export function AdminReviewExplorer({
                   Sélection multiple
                 </button>
                 {bulkMode && (
-                  <span>
-                    {selectedBulkIds.length
-                      ? `${selectedBulkIds.length} article(s) sélectionné(s)`
-                      : "Cliquez sur un article pour le sélectionner"}
-                  </span>
+                  <>
+                    <button
+                      type="button"
+                      onClick={toggleBulkAll}
+                      className="btn-action"
+                    >
+                      {selectedBulkIds.length === visibleArticles.length
+                        ? "Tout désélectionner"
+                        : "Tout sélectionner"}
+                    </button>
+                    <AdminActionMenu
+                      label={
+                        selectedBulkIds.length
+                          ? `Actions (${selectedBulkIds.length})`
+                          : "Actions groupées"
+                      }
+                      items={bulkActionItems}
+                      disabled={selectedBulkIds.length === 0}
+                      loading={runningBulkAction}
+                    />
+                    <span>
+                      {selectedBulkIds.length
+                        ? `${selectedBulkIds.length} article(s) sélectionné(s)`
+                        : "Cliquez sur un article pour le sélectionner"}
+                    </span>
+                  </>
                 )}
               </>
             )}
