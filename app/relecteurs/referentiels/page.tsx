@@ -17,7 +17,7 @@ export default function AdminReferentielsPage() {
   const [rubriques, setRubriques] = useState<Rubrique[]>([]);
   const [formats, setFormats] = useState<Format[]>([]);
   const [logo, setLogo] = useState<SiteLogoPayload>({
-    logoUrl: "/uploads/Logo_rer_noir-hd.jpg",
+    logoUrl: "/default-logo.svg",
     hasCustomLogo: false,
     updatedAt: null,
   });
@@ -389,6 +389,7 @@ export default function AdminReferentielsPage() {
                   fill
                   sizes="80px"
                   className="object-contain p-3"
+                  unoptimized
                 />
               </div>
               <div className="space-y-1 text-sm">

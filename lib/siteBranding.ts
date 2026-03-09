@@ -1,13 +1,10 @@
-import { mkdir, stat, writeFile } from "fs/promises";
-import path from "path";
-import sharp from "sharp";
+import { getPublicUrl } from "./storage";
+import { supabaseAdmin } from "./supabase-server";
 
-export const LEGACY_LOGO_PUBLIC_PATH = "/uploads/Logo_rer_noir-hd.jpg";
-
-const CUSTOM_LOGO_FILENAME = "admin-logo.png";
-const CUSTOM_LOGO_PUBLIC_PATH = `/uploads/${CUSTOM_LOGO_FILENAME}`;
-const uploadsDirectory = path.join(process.cwd(), "public", "uploads");
-const customLogoFilePath = path.join(uploadsDirectory, CUSTOM_LOGO_FILENAME);
+export const LEGACY_LOGO_PUBLIC_PATH = "/default-logo.svg";
+const STORAGE_BUCKET =
+  process.env.SUPABASE_STORAGE_BUCKET || process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET || "articles";
+const SITE_LOGO_KEY = "branding/admin-logo";
 
 export type SiteLogoPayload = {
   logoUrl: string;
@@ -16,38 +13,79 @@ export type SiteLogoPayload = {
 };
 
 export async function getSiteLogoPayload(): Promise<SiteLogoPayload> {
+  if (!supabaseAdmin) {
+    return getDefaultLogoPayload();
+  }
+
   try {
-    const metadata = await stat(customLogoFilePath);
-    const updatedAt = metadata.mtimeMs;
+    const { data, error } = await supabaseAdmin.storage
+      .from(STORAGE_BUCKET)
+      .list("branding", { search: "admin-logo", limit: 10 });
+
+    if (error) {
+      throw error;
+    }
+
+    const existingLogo = data?.find((entry) => entry.name === "admin-logo");
+    if (!existingLogo) {
+      return getDefaultLogoPayload();
+    }
+
+    const publicUrl = getPublicUrl(SITE_LOGO_KEY);
+    if (!publicUrl) {
+      return getDefaultLogoPayload();
+    }
+
+    const updatedAt = toTimestamp(existingLogo.updated_at) ?? toTimestamp(existingLogo.created_at);
 
     return {
-      logoUrl: `${CUSTOM_LOGO_PUBLIC_PATH}?v=${updatedAt}`,
+      logoUrl: `${publicUrl}?v=${updatedAt ?? Date.now()}`,
       hasCustomLogo: true,
-      updatedAt,
+      updatedAt: updatedAt ?? null,
     };
   } catch {
-    return {
-      logoUrl: LEGACY_LOGO_PUBLIC_PATH,
-      hasCustomLogo: false,
-      updatedAt: null,
-    };
+    return getDefaultLogoPayload();
   }
 }
 
-export async function saveSiteLogo(input: Buffer): Promise<SiteLogoPayload> {
-  await mkdir(uploadsDirectory, { recursive: true });
+export async function saveSiteLogo(input: Buffer, mimeType: string): Promise<SiteLogoPayload> {
+  if (!supabaseAdmin) {
+    throw new Error(
+      "Supabase admin client non initialisé. Vérifiez SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY."
+    );
+  }
 
-  const normalizedLogo = await sharp(input)
-    .resize({
-      width: 512,
-      height: 512,
-      fit: "inside",
-      withoutEnlargement: true,
-    })
-    .png()
-    .toBuffer();
+  if (!mimeType.startsWith("image/")) {
+    throw new Error("Le logo doit être un fichier image.");
+  }
 
-  await writeFile(customLogoFilePath, normalizedLogo);
+  const { error } = await supabaseAdmin.storage.from(STORAGE_BUCKET).upload(SITE_LOGO_KEY, input, {
+    contentType: normalizeMimeType(mimeType),
+    upsert: true,
+  });
+
+  if (error) {
+    throw error;
+  }
 
   return getSiteLogoPayload();
+}
+
+function getDefaultLogoPayload(): SiteLogoPayload {
+  return {
+    logoUrl: LEGACY_LOGO_PUBLIC_PATH,
+    hasCustomLogo: false,
+    updatedAt: null,
+  };
+}
+
+function toTimestamp(value: string | null | undefined): number | null {
+  if (!value) return null;
+  const timestamp = Date.parse(value);
+  return Number.isNaN(timestamp) ? null : timestamp;
+}
+
+function normalizeMimeType(mimeType: string): string {
+  if (mimeType === "image/jpg") return "image/jpeg";
+  return mimeType;
 }

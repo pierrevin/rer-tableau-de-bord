@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const buffer = Buffer.from(await file.arrayBuffer());
-    const payload = await saveSiteLogo(buffer);
+    const payload = await saveSiteLogo(buffer, file.type);
     return NextResponse.json(payload, { status: 201 });
   } catch (error) {
     console.error("Erreur upload logo admin", error);

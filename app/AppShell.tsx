@@ -16,7 +16,7 @@ type AppShellProps = {
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
   const isLogin = pathname === "/login";
-  const [logoUrl, setLogoUrl] = useState("/uploads/Logo_rer_noir-hd.jpg");
+  const [logoUrl, setLogoUrl] = useState("/default-logo.svg");
 
   useEffect(() => {
     let active = true;
@@ -68,6 +68,7 @@ export function AppShell({ children }: AppShellProps) {
                   fill
                   sizes="48px"
                   className="object-contain p-2"
+                  unoptimized
                   priority
                 />
               </div>
