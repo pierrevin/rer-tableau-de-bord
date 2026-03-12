@@ -57,16 +57,19 @@ export function AppShell({ children }: AppShellProps) {
 
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 0);
+      // Une fois que l’utilisateur a commencé à scroller,
+      // on garde la barre en mode compact pour le reste de la session.
+      if (!isScrolled && window.scrollY > 0) {
+        setIsScrolled(true);
+      }
     };
 
-    handleScroll();
     window.addEventListener("scroll", handleScroll, { passive: true });
 
     return () => {
       window.removeEventListener("scroll", handleScroll);
     };
-  }, []);
+  }, [isScrolled]);
 
   if (isLogin) {
     return <main className="flex-1">{children}</main>;
