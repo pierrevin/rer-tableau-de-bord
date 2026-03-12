@@ -206,14 +206,14 @@ export default async function MesArticlesPage({ searchParams }: PageProps) {
   return (
     <main>
       <div className="mx-auto max-w-6xl px-4 py-8 space-y-4">
-        <header className="flex flex-wrap items-center justify-between gap-3">
-          <div className="space-y-1">
-            <h1 className="text-2xl font-semibold text-rer-text">Mes articles</h1>
-            <p className="text-sm text-rer-muted">{statusSummary}</p>
+        <header className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-extrabold text-rer-text">Mes articles</h1>
+            <p className="mt-1 max-w-xl text-sm text-rer-muted">{statusSummary}</p>
           </div>
           <Link
             href="/articles/depot"
-            className="btn-cta"
+            className="btn-cta hidden lg:inline-flex"
           >
             <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-white/10 text-base leading-none">
               +

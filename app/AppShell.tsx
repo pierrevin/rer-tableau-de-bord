@@ -18,6 +18,7 @@ export function AppShell({ children }: AppShellProps) {
   const isLogin = pathname === "/login";
   const [logoUrl, setLogoUrl] = useState("/default-logo.svg");
   const [logoUnavailable, setLogoUnavailable] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -54,14 +55,35 @@ export function AppShell({ children }: AppShellProps) {
     };
   }, []);
 
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 0);
+    };
+
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, []);
+
   if (isLogin) {
     return <main className="flex-1">{children}</main>;
   }
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="border-b border-rer-border bg-white/90 backdrop-blur">
-        <div className="mx-auto max-w-6xl px-4 py-4">
+      <header
+        className={`sticky top-0 z-40 border-b border-rer-border bg-white/90 backdrop-blur transition-[box-shadow,background-color] duration-200 ease-out ${
+          isScrolled ? "shadow-sm" : ""
+        }`}
+      >
+        <div
+          className={`mx-auto max-w-6xl px-4 transition-[padding] duration-200 ease-out ${
+            isScrolled ? "py-3" : "py-4"
+          }`}
+        >
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <Link href="/" className="flex min-w-0 items-center gap-4">
               <div className="relative flex h-16 w-28 shrink-0 items-center justify-center overflow-hidden bg-white lg:h-20 lg:w-36">
@@ -95,7 +117,6 @@ export function AppShell({ children }: AppShellProps) {
               <AppUserStatus />
             </div>
           </div>
-          <AppHeaderSecondary />
         </div>
       </header>
       <main className="flex-1">{children}</main>
