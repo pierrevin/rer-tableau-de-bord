@@ -81,14 +81,18 @@ export function AppShell({ children }: AppShellProps) {
       >
         <div
           className={`mx-auto max-w-6xl px-4 transition-[padding] duration-200 ease-out ${
-            isScrolled ? "py-3" : "py-4"
+            isScrolled ? "py-1.5" : "py-4"
           }`}
         >
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div
+            className={`flex flex-col lg:flex-row lg:items-center lg:justify-between ${
+              isScrolled ? "gap-2" : "gap-4"
+            }`}
+          >
             <Link href="/" className="flex min-w-0 items-center gap-4">
               <div
                 className={`relative flex shrink-0 items-center justify-center overflow-hidden bg-white transition-[height,width] duration-200 ease-out ${
-                  isScrolled ? "h-12 w-24 lg:h-14 lg:w-32" : "h-16 w-28 lg:h-20 lg:w-36"
+                  isScrolled ? "h-9 w-24 lg:h-10 lg:w-28" : "h-16 w-28 lg:h-20 lg:w-36"
                 }`}
               >
                 {!logoUnavailable ? (
