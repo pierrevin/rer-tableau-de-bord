@@ -80,26 +80,26 @@ export function AppShell({ children }: AppShellProps) {
         }`}
       >
         <div
-          className={`mx-auto max-w-6xl px-4 ${
-            isScrolled ? "py-2" : "py-3"
-          } transition-[padding] duration-200 ease-out`}
+          className={`mx-auto max-w-6xl px-4 transition-[padding] duration-200 ease-out ${
+            isScrolled ? "py-3" : "py-4"
+          }`}
         >
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <Link href="/" className="flex min-w-0 items-center gap-3">
-              <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full border border-rer-border bg-white">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <Link href="/" className="flex min-w-0 items-center gap-4">
+              <div className="relative flex h-16 w-28 shrink-0 items-center justify-center overflow-hidden bg-white lg:h-20 lg:w-36">
                 {!logoUnavailable ? (
                   <Image
                     src={logoUrl}
                     alt="Logo RER"
                     fill
-                    sizes="48px"
-                    className="object-contain p-2"
+                    sizes="(max-width: 1024px) 112px, 144px"
+                    className="object-contain"
                     unoptimized
                     priority
                     onError={() => setLogoUnavailable(true)}
                   />
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center text-xs font-bold tracking-wide text-rer-muted">
+                  <div className="flex h-full w-full items-center justify-center text-sm font-bold tracking-wide text-rer-muted">
                     RER
                   </div>
                 )}

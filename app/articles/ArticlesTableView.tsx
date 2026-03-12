@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { ArticleReadSidePanel } from "@/app/articles/ArticleReadSidePanel";
+import { getArticleStatusLabel } from "@/lib/article-status";
 import {
   getFormatBadgeClasses,
   getRubriqueBadgeClasses,
@@ -18,7 +19,7 @@ type ArticleSummary = {
   mutuelle: { nom: string } | null;
   rubrique: { libelle: string } | null;
   format: { libelle: string } | null;
-  etat: { libelle: string } | null;
+  etat: { libelle: string; slug: string } | null;
   dateDepot: string | null;
   datePublication: string | null;
   createdAt: string;
@@ -83,6 +84,7 @@ export function ArticlesTableView({
     const params = new URLSearchParams();
     params.set("page", String(page));
     params.set("limit", String(pageSize));
+    if (mine !== "1") params.set("scope", "public");
     if (q) params.set("q", q);
     if (etatSlug) params.set("etat", etatSlug);
     if (mutuelleId) params.set("mutuelleId", mutuelleId);
@@ -280,7 +282,12 @@ export function ArticlesTableView({
                 })()}
               </td>
               <td className="px-3 py-2 text-sm text-rer-muted">
-                  {article.etat?.libelle || "—"}
+                  {article.etat
+                    ? getArticleStatusLabel(
+                        article.etat.slug,
+                        mine === "1" ? "author" : "public"
+                      ) ?? article.etat.libelle
+                    : "—"}
                 </td>
                 <td className="px-3 py-2 text-right text-sm">
                   <button

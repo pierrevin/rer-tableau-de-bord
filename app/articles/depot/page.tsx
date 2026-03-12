@@ -311,9 +311,9 @@ export default function DepotPage() {
       setLegendePhoto("");
       setPostRs("");
       if (newId) {
-        router.push(`/articles?mine=1&article=${encodeURIComponent(newId)}`);
+        router.push(`/mes-articles`);
       } else {
-        router.push(`/articles?mine=1`);
+        router.push(`/mes-articles`);
       }
     } catch {
       setSubmitStatus("error");
@@ -462,7 +462,7 @@ export default function DepotPage() {
           </button>
           {submitStatus === "ok" && (
             <span className="text-sm text-green-600">
-              Article déposé (état « À relire »).
+              Article déposé (état « Soumis à relecture »).
             </span>
           )}
           {submitStatus === "error" && (
