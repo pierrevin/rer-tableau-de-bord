@@ -95,7 +95,6 @@ export function AppShell({ children }: AppShellProps) {
               <AppUserStatus />
             </div>
           </div>
-          <AppHeaderSecondary />
         </div>
       </header>
       <main className="flex-1">{children}</main>
